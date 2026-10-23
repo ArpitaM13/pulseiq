@@ -1,0 +1,52 @@
+{
+  "started_at_utc": "2026-10-22T07:20:15.060453+00:00",
+  "input_file": "03_PulseIQ_Analytics_Star_Schema_Dataset.xlsx",
+  "tables": {
+    "dim_employee": {
+      "rows_in": 1606,
+      "rows_after_exact_dedup": 1606,
+      "rows_exact_duplicates": 0,
+      "rows_out": 1606,
+      "rejected": 0,
+      "clean_file": "data\\clean\\dim_employee.csv",
+      "rejected_file": "rejected\\dim_employee_rejected.csv"
+    },
+    "fact_payroll": {
+      "rows_in": 7344,
+      "rows_after_exact_dedup": 7344,
+      "rows_exact_duplicates": 0,
+      "rows_out": 7344,
+      "rejected": 0,
+      "clean_file": "data\\clean\\fact_payroll.csv",
+      "rejected_file": "rejected\\fact_payroll_rejected.csv"
+    },
+    "fact_attendance_monthly": {
+      "rows_in": 7343,
+      "rows_after_exact_dedup": 7343,
+      "rows_exact_duplicates": 0,
+      "rows_out": 7343,
+      "rejected": 0,
+      "clean_file": "data\\clean\\fact_attendance_monthly.csv",
+      "rejected_file": "rejected\\fact_attendance_monthly_rejected.csv"
+    },
+    "fact_leave": {
+      "rows_in": 3441,
+      "rows_after_exact_dedup": 3441,
+      "rows_exact_duplicates": 0,
+      "rows_out": 3439,
+      "rejected": 2,
+      "clean_file": "data\\clean\\fact_leave.csv",
+      "rejected_file": "rejected\\fact_leave_rejected.csv"
+    },
+    "fact_headcount_monthly": {
+      "rows_in": 891,
+      "rows_after_exact_dedup": 891,
+      "rows_exact_duplicates": 0,
+      "rows_out": 891,
+      "rejected": 0,
+      "clean_file": "data\\clean\\fact_headcount_monthly.csv",
+      "rejected_file": "rejected\\fact_headcount_monthly_rejected.csv"
+    }
+  },
+  "finished_at_utc": "2026-10-22T07:20:18.475321+00:00"
+}

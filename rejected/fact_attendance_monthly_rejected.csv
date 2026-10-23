@@ -1,0 +1,1 @@
+attendance_fact_id,employee_id,date_key,employee_key,department_id,scheduled_days,present_days,wfh_days,half_days_unpaid,paid_leave_days,unpaid_absence_days,late_arrivals,avg_hours_worked,overtime_hours,attendance_rate,period_end_date,_source_row

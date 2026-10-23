@@ -1,0 +1,35 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from src.dashboard_utils import metric, load_view, apply_period_filter, money
+
+st.title("Finance, Receivables & Cash Flow")
+st.caption("Phase 3 · Tasks 11–12 — P&L trends, invoice aging and expense monitoring")
+f=load_view("vw_finance_monthly")
+if not f.empty:
+    f=apply_period_filter(f)
+    fig=px.line(f,x="period",y=["revenue","net_profit"],markers=True,title="Revenue and net profit from the ledger",labels={"period":"Month","value":"INR","variable":"Metric"})
+    st.plotly_chart(fig,use_container_width=True)
+    fig=px.line(f,x="period",y=["operating_margin_pct","payroll_pct_revenue"],markers=True,title="Operating margin and payroll share of revenue",labels={"period":"Month","value":"Percent","variable":"Metric"})
+    st.plotly_chart(fig,use_container_width=True)
+dso=metric("M20")
+if not dso.empty and dso.metric_value.notna().any(): st.metric("Days sales outstanding (90-day basis)",f"{dso.metric_value.dropna().iloc[0]:.1f} days")
+age=load_view("vw_invoice_aging")
+if not age.empty:
+    st.subheader("Outstanding invoice balance by aging bucket")
+    fig=px.bar(age,x="ageing_bucket",y="balance_due",title="Open receivable balance",labels={"ageing_bucket":"Aging bucket","balance_due":"INR"})
+    st.plotly_chart(fig,use_container_width=True)
+ov=metric("M21")
+if not ov.empty:
+    st.subheader("Overdue receivables by client")
+    shown=ov.dropna(subset=["metric_value"]).sort_values("metric_value",ascending=False).head(15)
+    if not shown.empty:
+        fig=px.bar(shown,x="metric_value",y="dimension_label",orientation="h",title="Largest overdue balances (top 15)",labels={"metric_value":"INR","dimension_label":"Client ID"})
+        st.plotly_chart(fig,use_container_width=True)
+e=load_view("vw_expense_monthly_department")
+if not e.empty:
+    st.subheader("Expense trends by department")
+    e=apply_period_filter(e)
+    fig=px.line(e,x="period",y="total_expense",color="department_id",markers=True,title="Valid expense total by department",labels={"period":"Month","total_expense":"INR"})
+    st.plotly_chart(fig,use_container_width=True)
+st.caption("The monthly DSO uses the workbook's current invoice balance snapshot and 90-day invoice totals. It should not be read as a historical balance reconstruction.")

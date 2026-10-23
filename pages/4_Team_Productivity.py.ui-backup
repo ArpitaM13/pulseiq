@@ -1,0 +1,23 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from src.dashboard_utils import metric, load_view, apply_period_filter
+
+st.title("Team Productivity")
+st.caption("Phase 2 · Task 8 — Sprint completion, on-time delivery, velocity and cycle time")
+for mid,title in [("M22","Task completion rate by team and sprint"),("M23","On-time delivery rate by team and sprint")]:
+    d=metric(mid).dropna(subset=["metric_value"])
+    if not d.empty:
+        d=apply_period_filter(d)
+        fig=px.line(d,x="period",y="metric_value",color="dimension_label",markers=True,title=title,labels={"period":"Sprint start","metric_value":"Rate (%)","dimension_label":"Team / sprint"})
+        st.plotly_chart(fig,use_container_width=True)
+vel=metric("M24").dropna(subset=["metric_value"])
+if not vel.empty:
+    summary=vel.groupby("dimension_label",as_index=False).agg(metric_value=("metric_value","sum"),period=("period","max"))
+    summary=summary.sort_values("metric_value",ascending=False).head(15)
+    fig=px.bar(summary,x="metric_value",y="dimension_label",orientation="h",title="Top 15 team-sprint velocity totals (visible groups only)",labels={"metric_value":"Story points","dimension_label":"Team / sprint"})
+    st.plotly_chart(fig,use_container_width=True)
+cy=metric("M25").dropna(subset=["metric_value"])
+if not cy.empty:
+    st.metric("Mean visible cycle-time metric",f"{cy.metric_value.mean():.1f} days")
+    st.caption("Invalid negative cycle-time rows and Done tasks without a completion date are excluded from the analytical layer and remain in raw data for audit.")

@@ -1,0 +1,57 @@
+{
+  "generated_at_utc": "2026-10-23T12:46:10.648225+00:00",
+  "source_workbook": "03_PulseIQ_Analytics_Star_Schema_Dataset.xlsx",
+  "source_worksheets_loaded": 33,
+  "row_audit_tables_reconciled": 33,
+  "row_audit_tables_total": 33,
+  "row_audit_failures": 0,
+  "primary_key_tables_enforced": 31,
+  "primary_key_tables_total": 31,
+  "foreign_key_relationships_checked": 34,
+  "foreign_key_relationships_with_orphans": 1,
+  "foreign_key_orphan_rows": 2,
+  "contract_rule_rows": 42,
+  "contract_rule_failures": 1,
+  "unexpected_column_warnings": 9,
+  "partial_contract_coverage_warnings": 1,
+  "governed_metrics_defined": 28,
+  "dq_checks_run": 14,
+  "dq_status_counts": {
+    "WARN": 7,
+    "FAIL": 4,
+    "PASS": 3
+  },
+  "contract_columns_checked": 42,
+  "manual_metric_check_rows": 3069,
+  "manual_metric_checks_passed": 3069,
+  "manual_metric_check_failures": 0,
+  "clean_stage_counts": {
+    "dim_employee": {
+      "clean_rows": 1606,
+      "rejected_rows": 0
+    },
+    "fact_payroll": {
+      "clean_rows": 7344,
+      "rejected_rows": 0
+    },
+    "fact_attendance_monthly": {
+      "clean_rows": 7343,
+      "rejected_rows": 0
+    },
+    "fact_leave": {
+      "clean_rows": 3439,
+      "rejected_rows": 2
+    },
+    "fact_headcount_monthly": {
+      "clean_rows": 891,
+      "rejected_rows": 0
+    }
+  },
+  "latest_headcount_period": "2026-09-01 00:00:00",
+  "latest_headcount": 441,
+  "latest_payroll_period": "2026-09-01 00:00:00",
+  "latest_payroll_cost": 55519621.87000001,
+  "latest_finance_period": "2026-09-01 00:00:00",
+  "latest_revenue": 80268200.0,
+  "latest_net_profit": 14985979.13000001
+}

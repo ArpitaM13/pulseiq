@@ -1,0 +1,32 @@
+table_name,primary_key_columns,primary_key_enforced,status
+budget_payroll_dept_month,"month, department_id",True,PASS
+data_contracts,"feed, column_name",True,PASS
+dim_account,account_code,True,PASS
+dim_client,client_id,True,PASS
+dim_date,date_key,True,PASS
+dim_department,department_id,True,PASS
+dim_employee,employee_key,True,PASS
+dim_leave_type,leave_type_code,True,PASS
+dim_location,work_location,True,PASS
+dim_role,role_id,True,PASS
+dim_sprint,sprint_id,True,PASS
+dim_team,team_id,True,PASS
+dim_vendor,vendor_id,True,PASS
+dq_checks_catalog,check_id,True,PASS
+dq_known_issues,issue_id,True,PASS
+fact_anomaly,result_id,True,PASS
+fact_attendance_monthly,attendance_fact_id,True,PASS
+fact_attrition_risk,prediction_id,True,PASS
+fact_expense,expense_id,True,PASS
+fact_forecast,forecast_id,True,PASS
+fact_headcount_monthly,"date_key, department_id",True,PASS
+fact_invoice,invoice_id,True,PASS
+fact_invoice_payment,payment_id,True,PASS
+fact_leave,leave_request_id,True,PASS
+fact_ledger,line_id,True,PASS
+fact_payroll,payroll_item_id,True,PASS
+fact_task,task_id,True,PASS
+kpi_targets,"month, department_id",True,PASS
+metric_dictionary,metric_id,True,PASS
+reconciliation_answer_key,month,True,PASS
+reference_summary_dept_month,"month, department_id",True,PASS

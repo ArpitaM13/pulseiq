@@ -1,0 +1,25 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from src.dashboard_utils import metric, load_view, privacy_note
+
+st.title("Attrition & Risk Signals")
+st.caption("Phase 2  |  Task 7 - Trend monitoring with a privacy-first view of risk")
+for mid,title in [("M04","Monthly attrition rate"),("M05","Rolling 12-month attrition rate"),("M06","Voluntary attrition rate")]:
+    d=metric(mid)
+    if not d.empty:
+        d=d.dropna(subset=["metric_value"])
+        if not d.empty:
+            fig=px.line(d,x="period",y="metric_value",color="department_id",markers=True,title=title,labels={"period":"Month","metric_value":"Percent"})
+            st.plotly_chart(fig,width="stretch")
+r=load_view("vw_attrition_risk_department")
+if not r.empty:
+    st.subheader("Latest risk-band mix by department")
+    shown=r.dropna(subset=["high_risk_share_pct"])
+    if not shown.empty:
+        fig=px.bar(shown,x="department_id",y="high_risk_share_pct",title="High-risk share - departments with at least 10 scored employees",labels={"department_id":"Department","high_risk_share_pct":"High-risk share (%)"})
+        st.plotly_chart(fig,width="stretch")
+    st.dataframe(r[["department_id","as_of_date","employee_count","high_risk_count","high_risk_share_pct"]],width="stretch",hide_index=True)
+else: st.info("No fresh attrition risk batch is available.")
+st.warning("Risk scores are triage signals, not a conclusion about an individual. The dashboard intentionally does not list employee names or person-level scores.")
+privacy_note()

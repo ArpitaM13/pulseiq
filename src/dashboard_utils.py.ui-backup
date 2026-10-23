@@ -1,0 +1,112 @@
+"""Shared helpers for the Streamlit UI. Pages query governed analytics views only."""
+from __future__ import annotations
+from pathlib import Path
+import duckdb
+import pandas as pd
+import streamlit as st
+import plotly.express as px
+
+ROOT = Path(__file__).resolve().parents[1]
+DB_FILE = ROOT / "data" / "pulseiq.duckdb"
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def load_view(view_name: str) -> pd.DataFrame:
+    if not view_name.replace("_", "").isalnum() or not view_name.startswith("vw_"):
+        raise ValueError("Only named analytics views can be loaded into the dashboard.")
+    if not DB_FILE.exists():
+        return pd.DataFrame()
+    con = duckdb.connect(str(DB_FILE), read_only=True)
+    try:
+        return con.execute(f"SELECT * FROM analytics.{view_name}").df()
+    finally:
+        con.close()
+
+
+def require_data(view_name: str) -> pd.DataFrame:
+    df = load_view(view_name)
+    if df.empty:
+        st.info("No rows are available yet. Run `python run_pipeline.py` from the project folder first.")
+    return df
+
+
+def metric(metric_id: str) -> pd.DataFrame:
+    all_metrics = load_view("vw_all_metrics")
+    if all_metrics.empty:
+        return all_metrics
+    return all_metrics.loc[all_metrics["metric_id"].astype(str).eq(metric_id)].copy()
+
+
+def money(value) -> str:
+    if value is None or pd.isna(value): return "—"
+    return "₹" + f"{float(value):,.0f}"
+
+
+def pct(value, multiplier=1.0) -> str:
+    if value is None or pd.isna(value): return "—"
+    return f"{float(value)*multiplier:.1f}%"
+
+
+def apply_period_filter(df: pd.DataFrame, date_col: str = "period") -> pd.DataFrame:
+    if df.empty or date_col not in df.columns:
+        return df
+    out = df.copy()
+    out[date_col] = pd.to_datetime(out[date_col], errors="coerce")
+    valid = out[date_col].dropna()
+    if valid.empty:
+        return out
+    min_d, max_d = valid.min().date(), valid.max().date()
+    col1, col2 = st.columns(2)
+    start = col1.date_input("From", value=min_d, min_value=min_d, max_value=max_d, key=f"{date_col}_from")
+    end = col2.date_input("To", value=max_d, min_value=min_d, max_value=max_d, key=f"{date_col}_to")
+    if start > end:
+        st.warning("The start date is after the end date; showing all dates until the range is corrected.")
+        return out
+    return out.loc[out[date_col].between(pd.Timestamp(start), pd.Timestamp(end))]
+
+
+def department_filter(df: pd.DataFrame, label: str = "Department") -> pd.DataFrame:
+    if df.empty or "department_id" not in df.columns:
+        return df
+    options = sorted(df["department_id"].dropna().astype(str).unique().tolist())
+    chosen = st.multiselect(label, options, default=options, key=f"dep_{label}")
+    if not chosen:
+        return df.iloc[0:0]
+    return df.loc[df["department_id"].astype(str).isin(chosen)]
+
+
+def metric_line(df: pd.DataFrame, title: str, y_title: str | None = None, x: str = "period", y: str = "metric_value", color: str = "department_id") -> None:
+    usable = df.dropna(subset=[x, y]).copy() if not df.empty and x in df and y in df else pd.DataFrame()
+    if usable.empty:
+        st.info("No unsuppressed values are available for this chart and date range.")
+        return
+    if color not in usable.columns:
+        color = None
+    fig = px.line(usable, x=x, y=y, color=color, markers=True, title=title, labels={x: "Period", y: y_title or "Value", color or "": "Group"})
+    fig.update_layout(margin=dict(l=10, r=10, t=55, b=10), legend_title_text="Group", hovermode="x unified")
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def metric_bar(df: pd.DataFrame, title: str, x: str = "dimension_label", y: str = "metric_value", horizontal: bool = True) -> None:
+    usable = df.dropna(subset=[x, y]).copy() if not df.empty and x in df and y in df else pd.DataFrame()
+    if usable.empty:
+        st.info("No unsuppressed values are available for this chart.")
+        return
+    usable = usable.sort_values(y, ascending=not horizontal)
+    if horizontal:
+        fig = px.bar(usable, x=y, y=x, orientation="h", title=title, labels={x: "Group", y: "Value"})
+    else:
+        fig = px.bar(usable, x=x, y=y, title=title, labels={x: "Group", y: "Value"})
+    fig.update_layout(margin=dict(l=10, r=10, t=55, b=10))
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def privacy_note() -> None:
+    st.caption("Privacy guardrail: metric values for groups below the metric dictionary's minimum group size are suppressed. This dashboard does not display individual employee risk scores.")
+
+
+def empty_state() -> None:
+    st.title("PulseIQ Analytics")
+    st.warning("The local DuckDB database is not ready yet.")
+    st.code("python run_pipeline.py", language="powershell")
+    st.write("Run the command in a terminal opened at the project root, then refresh this page.")

@@ -1,0 +1,52 @@
+feed,table_name,column_name,rows_checked,violations,status,detail
+AI anomaly results (fact_anomaly),fact_anomaly,period_key,405,0,WARN,Unexpected column preserved in raw/warehouse table; review schema change
+AI anomaly results (fact_anomaly),fact_anomaly,result_id,405,0,PASS,Contract type/nullability/basic rule passed
+AI anomaly results (fact_anomaly),fact_anomaly,source_dataset,405,0,PASS,Contract type/nullability/basic rule passed
+AI anomaly results (fact_anomaly),fact_anomaly,record_id,405,0,WARN,"WARN: attendance feature source is not supplied, so its record_id values cannot be cross-checked"
+AI anomaly results (fact_anomaly),fact_anomaly,employee_id,405,0,PASS,Contract type/nullability/basic rule passed
+AI anomaly results (fact_anomaly),fact_anomaly,period,405,0,PASS,Contract type/nullability/basic rule passed
+AI anomaly results (fact_anomaly),fact_anomaly,anomaly_score,405,0,PASS,Contract type/nullability/basic rule passed
+AI anomaly results (fact_anomaly),fact_anomaly,flagged,405,0,PASS,Contract type/nullability/basic rule passed
+AI anomaly results (fact_anomaly),fact_anomaly,reason_code,405,0,PASS,Contract type/nullability/basic rule passed
+AI anomaly results (fact_anomaly),fact_anomaly,reason_text,405,0,PASS,Contract type/nullability/basic rule passed
+AI anomaly results (fact_anomaly),fact_anomaly,money_at_risk,405,0,PASS,Contract type/nullability/basic rule passed
+AI anomaly results (fact_anomaly),fact_anomaly,model_version,405,0,PASS,Contract type/nullability/basic rule passed
+AI anomaly results (fact_anomaly),fact_anomaly,scored_at,405,0,PASS,Contract type/nullability/basic rule passed
+AI attrition risk (fact_attrition_risk),fact_attrition_risk,as_of_date_key,430,0,WARN,Unexpected column preserved in raw/warehouse table; review schema change
+AI attrition risk (fact_attrition_risk),fact_attrition_risk,employee_key,430,0,WARN,Unexpected column preserved in raw/warehouse table; review schema change
+AI attrition risk (fact_attrition_risk),fact_attrition_risk,model_note,430,0,WARN,Unexpected column preserved in raw/warehouse table; review schema change
+AI attrition risk (fact_attrition_risk),fact_attrition_risk,prediction_id,430,0,PASS,Contract type/nullability/basic rule passed
+AI attrition risk (fact_attrition_risk),fact_attrition_risk,employee_id,430,0,PASS,Contract type/nullability/basic rule passed
+AI attrition risk (fact_attrition_risk),fact_attrition_risk,department_id,430,0,PASS,Contract type/nullability/basic rule passed
+AI attrition risk (fact_attrition_risk),fact_attrition_risk,as_of_date,430,0,PASS,Contract type/nullability/basic rule passed
+AI attrition risk (fact_attrition_risk),fact_attrition_risk,risk_score_12m,430,0,PASS,Contract type/nullability/basic rule passed
+AI attrition risk (fact_attrition_risk),fact_attrition_risk,risk_band,430,0,PASS,Contract type/nullability/basic rule passed
+AI attrition risk (fact_attrition_risk),fact_attrition_risk,top_reason_1..3,430,0,PASS,Contract type/nullability/basic rule passed
+AI attrition risk (fact_attrition_risk),fact_attrition_risk,model_version,430,0,PASS,Contract type/nullability/basic rule passed
+AI forecast (fact_forecast),fact_forecast,forecast_month_key,72,0,WARN,Unexpected column preserved in raw/warehouse table; review schema change
+AI forecast (fact_forecast),fact_forecast,model_version,72,0,WARN,Unexpected column preserved in raw/warehouse table; review schema change
+AI forecast (fact_forecast),fact_forecast,forecast_id,72,0,PASS,Contract type/nullability/basic rule passed
+AI forecast (fact_forecast),fact_forecast,metric,72,0,PASS,Contract type/nullability/basic rule passed
+AI forecast (fact_forecast),fact_forecast,department_id,72,0,PASS,Contract type/nullability/basic rule passed
+AI forecast (fact_forecast),fact_forecast,forecast_month,72,0,PASS,Contract type/nullability/basic rule passed
+AI forecast (fact_forecast),fact_forecast,forecast_value,72,0,PASS,Contract type/nullability/basic rule passed
+AI forecast (fact_forecast),fact_forecast,lower_80,72,0,PASS,Contract type/nullability/basic rule passed
+AI forecast (fact_forecast),fact_forecast,upper_80,72,0,PASS,Contract type/nullability/basic rule passed
+AI forecast (fact_forecast),fact_forecast,method,72,0,PASS,Contract type/nullability/basic rule passed
+AI forecast (fact_forecast),fact_forecast,trained_through,72,0,PASS,Contract type/nullability/basic rule passed
+Task board (fact_task),fact_task,completed_on_time,28868,0,WARN,Unexpected column preserved in raw/warehouse table; review schema change
+Task board (fact_task),fact_task,cycle_time_days,28868,0,WARN,Unexpected column preserved in raw/warehouse table; review schema change
+Task board (fact_task),fact_task,is_overdue_at_cutoff,28868,0,WARN,Unexpected column preserved in raw/warehouse table; review schema change
+Task board (fact_task),fact_task,task_id,28868,0,PASS,Contract type/nullability/basic rule passed
+Task board (fact_task),fact_task,team_id,28868,0,PASS,Contract type/nullability/basic rule passed
+Task board (fact_task),fact_task,sprint_id,28868,0,PASS,Contract type/nullability/basic rule passed
+Task board (fact_task),fact_task,assignee_employee_id,28868,0,PASS,Contract type/nullability/basic rule passed
+Task board (fact_task),fact_task,task_type,28868,0,PASS,Contract type/nullability/basic rule passed
+Task board (fact_task),fact_task,priority,28868,0,PASS,Contract type/nullability/basic rule passed
+Task board (fact_task),fact_task,story_points,28868,0,PASS,Contract type/nullability/basic rule passed
+Task board (fact_task),fact_task,created_date,28868,0,PASS,Contract type/nullability/basic rule passed
+Task board (fact_task),fact_task,started_date,28868,0,PASS,Contract type/nullability/basic rule passed
+Task board (fact_task),fact_task,due_date,28868,0,PASS,Contract type/nullability/basic rule passed
+Task board (fact_task),fact_task,completed_date,28868,20,FAIL,completed_date: 20
+Task board (fact_task),fact_task,status,28868,0,PASS,Contract type/nullability/basic rule passed
+Task board (fact_task),fact_task,reopened_count,28868,0,PASS,Contract type/nullability/basic rule passed

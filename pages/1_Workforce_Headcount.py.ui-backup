@@ -1,0 +1,23 @@
+import streamlit as st
+import pandas as pd
+from src.dashboard_utils import load_view, metric, apply_period_filter, department_filter, metric_line, metric_bar, privacy_note
+
+st.title("Workforce & Headcount")
+st.caption("Phase 1 · Task 5 — Headcount mix, growth and working arrangement overview")
+hc=metric("M01")
+if hc.empty: st.info("Run the pipeline first."); st.stop()
+hc=apply_period_filter(hc)
+hc=department_filter(hc)
+metric_line(hc,"End-of-month headcount by department",y_title="Employees")
+valid=hc.dropna(subset=["metric_value"])
+if not valid.empty:
+    latest=valid[valid.period==valid.period.max()]
+    metric_bar(latest.rename(columns={"department_id":"dimension_label"}),"Department mix at the latest selected month",x="dimension_label")
+    st.caption(f"The latest selected month has {len(latest)} department groups visible. Small groups are suppressed by the governed metric view.")
+mix=load_view("vw_workforce_mix")
+if not mix.empty:
+    st.subheader("Current workforce mix")
+    for kind in ["Work mode","Work location","Department"]:
+        sub=mix[mix.dimension_type==kind].dropna(subset=["employee_count"])
+        if not sub.empty: metric_bar(sub.rename(columns={"dimension_value":"dimension_label","employee_count":"metric_value"}),f"{kind} distribution",x="dimension_label")
+privacy_note()

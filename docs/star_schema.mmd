@@ -1,0 +1,60 @@
+flowchart LR
+  subgraph Dimensions[Dimensions]
+    DD["dim_date<br/>PK date_key"]
+    DE["dim_employee<br/>PK employee_key<br/>SCD2 employee versions"]
+    DDEP["dim_department<br/>PK department_id"]
+    DR["dim_role<br/>PK role_id"]
+    DL["dim_location<br/>PK work_location"]
+    DLT["dim_leave_type<br/>PK leave_type_code"]
+    DA["dim_account<br/>PK account_code"]
+    DC["dim_client<br/>PK client_id"]
+    DV["dim_vendor<br/>PK vendor_id"]
+    DT["dim_team<br/>PK team_id"]
+    DS["dim_sprint<br/>PK sprint_id"]
+  end
+  subgraph Facts[Fact tables]
+    FP["fact_payroll<br/>PK payroll_item_id"]
+    FAA["fact_attendance_monthly<br/>PK attendance_fact_id"]
+    FL["fact_leave<br/>PK leave_request_id"]
+    FHC["fact_headcount_monthly<br/>PK date_key + department_id"]
+    FLED["fact_ledger<br/>PK line_id"]
+    FINV["fact_invoice<br/>PK invoice_id"]
+    FPAY["fact_invoice_payment<br/>PK payment_id"]
+    FEXP["fact_expense<br/>PK expense_id"]
+    FT["fact_task<br/>PK task_id"]
+    FAN["fact_anomaly<br/>PK result_id"]
+    FAR["fact_attrition_risk<br/>PK prediction_id"]
+    FF["fact_forecast<br/>PK forecast_id"]
+  end
+  DD -->|date_key| FP
+  DE -->|employee_key| FP
+  DDEP -->|department_id| FP
+  DR -->|role_id| FP
+  DD -->|date_key| FAA
+  DE -->|employee_key| FAA
+  DDEP -->|department_id| FAA
+  DD -->|start/end date key| FL
+  DE -->|employee_key| FL
+  DLT -->|leave_type_code| FL
+  DD -->|date_key| FHC
+  DDEP -->|department_id| FHC
+  DD -->|date_key| FLED
+  DA -->|account_code| FLED
+  DDEP -->|cost center department| FLED
+  DC -->|client_id| FINV
+  DD -->|invoice date key| FINV
+  FINV -->|invoice_id| FPAY
+  DD -->|payment date key| FPAY
+  DV -->|vendor_id| FEXP
+  DA -->|category account| FEXP
+  DDEP -->|department_id| FEXP
+  DD -->|expense date key| FEXP
+  DT -->|team_id| FT
+  DS -->|sprint_id| FT
+  DE -->|assignee employee_id*| FT
+  DE -->|employee_key| FAR
+  DDEP -->|department_id| FAR
+  DDEP -->|department_id; ALL is company aggregate| FF
+  FAN -. scored signal .-> FP
+  FAN -. scored signal .-> FAA
+  FF -. future prediction compared to actual .-> FHC

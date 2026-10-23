@@ -1,0 +1,29 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from src.dashboard_utils import load_view, privacy_note
+
+st.title("Cross-Department Impact View")
+st.caption("Phase 3  |  Task 13 - Compare people, attendance, attrition and payroll indicators at the same department-month grain")
+m=load_view("vw_all_metrics")
+if m.empty: st.info("Run the pipeline first."); st.stop()
+selected_ids=["M01","M04","M09","M13"]
+sub=m[m.metric_id.isin(selected_ids)].copy()
+sub["period"]=pd.to_datetime(sub["period"],errors="coerce")
+base=sub.pivot_table(index=["period","department_id"],columns="metric_id",values="metric_value",aggfunc="first").reset_index()
+base=base.rename(columns={"M01":"headcount","M04":"monthly_attrition_pct","M09":"payroll_cost_inr","M13":"attendance_rate"})
+if base.empty: st.info("No comparable department-month rows are available."); st.stop()
+valid=base[base[["headcount","monthly_attrition_pct","payroll_cost_inr","attendance_rate"]].notna().any(axis=1)]
+if not valid.empty:
+    a,b=st.columns(2)
+    with a:
+        fig=px.scatter(valid,x="attendance_rate",y="monthly_attrition_pct",size="headcount",color="department_id",hover_data=["period","payroll_cost_inr"],title="Attendance and monthly attrition by department-month",labels={"attendance_rate":"Attendance ratio","monthly_attrition_pct":"Attrition (%)","period":"Month"})
+        st.plotly_chart(fig,width="stretch")
+    with b:
+        latest=valid[valid.period==valid.period.max()].dropna(subset=["payroll_cost_inr"])
+        if not latest.empty:
+            fig=px.bar(latest,x="department_id",y="payroll_cost_inr",title="Validated payroll cost across visible departments",labels={"department_id":"Department","payroll_cost_inr":"INR"})
+            st.plotly_chart(fig,width="stretch")
+    st.dataframe(valid.sort_values("period",ascending=False),width="stretch",hide_index=True)
+st.warning("This is a descriptive comparison. It does not establish that attendance caused attrition or that payroll cost caused a business outcome.")
+privacy_note()

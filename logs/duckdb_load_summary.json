@@ -1,0 +1,173 @@
+{
+  "started_at_utc": "2026-10-23T12:45:56.123588+00:00",
+  "input_file": "data\\raw\\03_PulseIQ_Analytics_Star_Schema_Dataset.xlsx",
+  "database_file": "data\\pulseiq.duckdb",
+  "tables": {
+    "readme": {
+      "source_sheet": "README",
+      "rows_loaded": 108,
+      "columns_loaded": 6
+    },
+    "data_dictionary": {
+      "source_sheet": "data_dictionary",
+      "rows_loaded": 371,
+      "columns_loaded": 8
+    },
+    "metric_dictionary": {
+      "source_sheet": "metric_dictionary",
+      "rows_loaded": 28,
+      "columns_loaded": 12
+    },
+    "data_contracts": {
+      "source_sheet": "data_contracts",
+      "rows_loaded": 42,
+      "columns_loaded": 6
+    },
+    "dq_checks_catalog": {
+      "source_sheet": "dq_checks_catalog",
+      "rows_loaded": 14,
+      "columns_loaded": 9
+    },
+    "dim_date": {
+      "source_sheet": "dim_date",
+      "rows_loaded": 2557,
+      "columns_loaded": 18
+    },
+    "dim_employee": {
+      "source_sheet": "dim_employee",
+      "rows_loaded": 1606,
+      "columns_loaded": 21
+    },
+    "dim_department": {
+      "source_sheet": "dim_department",
+      "rows_loaded": 11,
+      "columns_loaded": 5
+    },
+    "dim_role": {
+      "source_sheet": "dim_role",
+      "rows_loaded": 58,
+      "columns_loaded": 10
+    },
+    "dim_location": {
+      "source_sheet": "dim_location",
+      "rows_loaded": 9,
+      "columns_loaded": 4
+    },
+    "dim_leave_type": {
+      "source_sheet": "dim_leave_type",
+      "rows_loaded": 6,
+      "columns_loaded": 8
+    },
+    "dim_account": {
+      "source_sheet": "dim_account",
+      "rows_loaded": 47,
+      "columns_loaded": 8
+    },
+    "dim_client": {
+      "source_sheet": "dim_client",
+      "rows_loaded": 28,
+      "columns_loaded": 14
+    },
+    "dim_vendor": {
+      "source_sheet": "dim_vendor",
+      "rows_loaded": 30,
+      "columns_loaded": 7
+    },
+    "dim_team": {
+      "source_sheet": "dim_team",
+      "rows_loaded": 16,
+      "columns_loaded": 7
+    },
+    "dim_sprint": {
+      "source_sheet": "dim_sprint",
+      "rows_loaded": 38,
+      "columns_loaded": 6
+    },
+    "fact_payroll": {
+      "source_sheet": "fact_payroll",
+      "rows_loaded": 7344,
+      "columns_loaded": 33
+    },
+    "fact_attendance_monthly": {
+      "source_sheet": "fact_attendance_monthly",
+      "rows_loaded": 7343,
+      "columns_loaded": 16
+    },
+    "fact_leave": {
+      "source_sheet": "fact_leave",
+      "rows_loaded": 3441,
+      "columns_loaded": 14
+    },
+    "fact_headcount_monthly": {
+      "source_sheet": "fact_headcount_monthly",
+      "rows_loaded": 891,
+      "columns_loaded": 11
+    },
+    "fact_ledger": {
+      "source_sheet": "fact_ledger",
+      "rows_loaded": 6784,
+      "columns_loaded": 13
+    },
+    "fact_invoice": {
+      "source_sheet": "fact_invoice",
+      "rows_loaded": 743,
+      "columns_loaded": 20
+    },
+    "fact_invoice_payment": {
+      "source_sheet": "fact_invoice_payment",
+      "rows_loaded": 709,
+      "columns_loaded": 9
+    },
+    "fact_expense": {
+      "source_sheet": "fact_expense",
+      "rows_loaded": 501,
+      "columns_loaded": 20
+    },
+    "fact_task": {
+      "source_sheet": "fact_task",
+      "rows_loaded": 28868,
+      "columns_loaded": 16
+    },
+    "fact_anomaly": {
+      "source_sheet": "fact_anomaly",
+      "rows_loaded": 405,
+      "columns_loaded": 13
+    },
+    "fact_attrition_risk": {
+      "source_sheet": "fact_attrition_risk",
+      "rows_loaded": 430,
+      "columns_loaded": 13
+    },
+    "fact_forecast": {
+      "source_sheet": "fact_forecast",
+      "rows_loaded": 72,
+      "columns_loaded": 11
+    },
+    "budget_payroll_dept_month": {
+      "source_sheet": "budget_payroll_dept_month",
+      "rows_loaded": 198,
+      "columns_loaded": 3
+    },
+    "kpi_targets": {
+      "source_sheet": "kpi_targets",
+      "rows_loaded": 180,
+      "columns_loaded": 6
+    },
+    "reconciliation_answer_key": {
+      "source_sheet": "reconciliation_answer_key",
+      "rows_loaded": 18,
+      "columns_loaded": 12
+    },
+    "reference_summary_dept_month": {
+      "source_sheet": "reference_summary_dept_month",
+      "rows_loaded": 198,
+      "columns_loaded": 19
+    },
+    "dq_known_issues": {
+      "source_sheet": "dq_known_issues",
+      "rows_loaded": 11,
+      "columns_loaded": 7
+    }
+  },
+  "finished_at_utc": "2026-10-23T12:46:03.660312+00:00"
+}

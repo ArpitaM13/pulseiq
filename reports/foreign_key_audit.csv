@@ -1,0 +1,35 @@
+child_table,child_column,parent_table,parent_column,relationship,orphan_rows,status
+fact_payroll,employee_key,dim_employee,employee_key,Payroll employee history; join by employee_key,2,FAIL
+fact_payroll,department_id,dim_department,department_id,Payroll department,0,PASS
+fact_payroll,role_id,dim_role,role_id,Payroll role,0,PASS
+fact_payroll,date_key,dim_date,date_key,Payroll date,0,PASS
+fact_attendance_monthly,employee_key,dim_employee,employee_key,Attendance employee history,0,PASS
+fact_attendance_monthly,department_id,dim_department,department_id,Attendance department,0,PASS
+fact_attendance_monthly,date_key,dim_date,date_key,Attendance date,0,PASS
+fact_leave,employee_key,dim_employee,employee_key,Leave employee history,0,PASS
+fact_leave,leave_type_code,dim_leave_type,leave_type_code,Leave type,0,PASS
+fact_leave,start_date_key,dim_date,date_key,Leave start date,0,PASS
+fact_leave,end_date_key,dim_date,date_key,Leave end date,0,PASS
+fact_headcount_monthly,department_id,dim_department,department_id,Headcount department,0,PASS
+fact_headcount_monthly,date_key,dim_date,date_key,Headcount month-end date,0,PASS
+fact_ledger,account_code,dim_account,account_code,Ledger account,0,PASS
+fact_ledger,date_key,dim_date,date_key,Ledger date,0,PASS
+fact_ledger,cost_center_department_id,dim_department,department_id,Optional ledger cost-centre department,0,PASS
+fact_invoice,client_id,dim_client,client_id,Invoice client,0,PASS
+fact_invoice,invoice_date_key,dim_date,date_key,Invoice date,0,PASS
+fact_invoice,service_line_account,dim_account,account_code,Invoice service-line account,0,PASS
+fact_invoice_payment,invoice_id,fact_invoice,invoice_id,Payment invoice,0,PASS
+fact_invoice_payment,payment_date_key,dim_date,date_key,Payment date,0,PASS
+fact_expense,vendor_id,dim_vendor,vendor_id,Expense vendor,0,PASS
+fact_expense,department_id,dim_department,department_id,Expense department,0,PASS
+fact_expense,expense_date_key,dim_date,date_key,Expense date,0,PASS
+fact_expense,category_account,dim_account,account_code,Expense account,0,PASS
+fact_task,team_id,dim_team,team_id,Task team,0,PASS
+fact_task,sprint_id,dim_sprint,sprint_id,Task sprint,0,PASS
+fact_task,assignee_employee_id,dim_employee,employee_id,Task assignee; employee_id may repeat across history versions,0,PASS
+fact_attrition_risk,employee_key,dim_employee,employee_key,Risk prediction employee history,0,PASS
+fact_attrition_risk,department_id,dim_department,department_id,Risk prediction department,0,PASS
+fact_anomaly,employee_id,dim_employee,employee_id,Anomaly employee; employee_id may repeat across history versions,0,PASS
+fact_forecast,department_id,dim_department,department_id,Forecast department; ALL is an allowed aggregate,0,PASS
+kpi_targets,department_id,dim_department,department_id,KPI target department,0,PASS
+budget_payroll_dept_month,department_id,dim_department,department_id,Budget department,0,PASS

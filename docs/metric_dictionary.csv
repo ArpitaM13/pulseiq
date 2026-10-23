@@ -1,0 +1,6 @@
+metric_name,definition,formula,source_table,grain,caveat
+Current Headcount,Number of active employees at the selected as-of date,Count current active employee records,dim_employee,Employee as of date,Use current SCD record only
+Gross Payroll,Total gross pay for the selected period,Sum gross_pay,fact_payroll,Employee payroll item per period,Confirm run_id handling before aggregating
+Employer Payroll Cost,Total employer cost for the selected period,Sum employer_cost,fact_payroll,Employee payroll item per period,Includes employer contributions
+Attendance Rate,Attendance rate for the selected period,Sum present_days divided by sum scheduled_days,fact_attendance_monthly,Employee-month,Check how leave and half-days are treated
+Monthly Attrition Rate,Monthly attrition percentage,Use attrition_rate_monthly_pct from fact_headcount_monthly,fact_headcount_monthly,Department-month,Confirm denominator in metric dictionary

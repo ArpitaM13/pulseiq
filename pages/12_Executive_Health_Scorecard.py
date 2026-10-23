@@ -1,0 +1,44 @@
+import streamlit as st
+import pandas as pd
+from src.dashboard_utils import load_view, money, pct, privacy_note
+
+st.title("Executive Company-Health Scorecard")
+st.caption("Phase 3  |  Task 15 - One dated view of people, delivery, finance and data trust")
+company=load_view("vw_company_kpis")
+finance=load_view("vw_finance_monthly")
+dq=load_view("vw_dq_results")
+team=load_view("vw_task_summary")
+if company.empty: st.info("Run the pipeline first."); st.stop()
+company["period"]=pd.to_datetime(company.period,errors="coerce")
+def latest_non_null(frame,col):
+    x=frame.dropna(subset=[col]).copy()
+    if x.empty:return None
+    x["period"]=pd.to_datetime(x["period"],errors="coerce") if "period" in x else pd.NaT
+    return x.sort_values("period").iloc[-1]
+h=latest_non_null(company,"headcount")
+a=latest_non_null(company,"attendance_rate")
+t=latest_non_null(company,"attrition_pct")
+p=latest_non_null(company,"payroll_cost")
+f=None
+if not finance.empty:
+    finance["period"]=pd.to_datetime(finance.period,errors="coerce")
+    f=latest_non_null(finance,"operating_margin_pct")
+cols=st.columns(4)
+cols[0].metric("Latest headcount",f"{h['headcount']:,.0f}" if h is not None else "-",h["period"].strftime("%b %Y") if h is not None else "No data")
+cols[1].metric("Latest attendance",pct(a["attendance_rate"],100) if a is not None else "-",a["period"].strftime("%b %Y") if a is not None else "No data")
+cols[2].metric("Latest monthly attrition",pct(t["attrition_pct"],1) if t is not None else "-",t["period"].strftime("%b %Y") if t is not None else "No data")
+cols[3].metric("Latest employer payroll cost",money(p["payroll_cost"]) if p is not None else "-",p["period"].strftime("%b %Y") if p is not None else "No data")
+cols2=st.columns(4)
+cols2[0].metric("Operating margin",pct(f["operating_margin_pct"],1) if f is not None else "-",f["period"].strftime("%b %Y") if f is not None else "No data")
+if not team.empty:
+    cols2[1].metric("Visible sprint rows",f"{len(team):,}")
+if not dq.empty:
+    cols2[2].metric("Critical DQ failures",int((dq.status=="FAIL").sum()))
+    cols2[3].metric("Quality warnings",int((dq.status=="WARN").sum()))
+st.subheader("What should happen next")
+if not dq.empty and (dq.status=="FAIL").any():
+    st.error("Resolve or formally accept the critical data-quality findings before a production decision.")
+else:
+    st.success("No critical quality failures were recorded in the latest run.")
+st.markdown("- Confirm the reporting period for each feed; different source tables end on different dates.\n- Review payroll-to-ledger reconciliation before discussing finance results.\n- Use department aggregates to prioritize follow-up, not to infer causality or judge an individual.\n- Keep forecast error marked unavailable until actuals overlap forecast periods.")
+privacy_note()

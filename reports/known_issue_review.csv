@@ -1,0 +1,12 @@
+issue_id,table_name,issue_type,expected_check_id,expected_check,check_status,check_rows_affected,check_fired,affected_record_ids,effect_on_totals
+DQ-01,fact_attendance_monthly,ATTENDANCE_AFTER_EXIT,DQ-C05,No attendance after employee exit_date,WARN,4,True,"FA-X0001, FA-X0002, FA-X0003, FA-X0004",Adds 4 extra employee-months to attendance totals
+DQ-02,fact_payroll,DUPLICATE_PAYROLL_ROW,DQ-C03,"Unique (employee_id, run_id)",FAIL,2,True,"PI-X0001, PI-X0002","Overstates payroll gross by 213,025.04 and net by 195,166.42"
+DQ-03,fact_payroll,ORPHAN_FOREIGN_KEY,DQ-C04,Every fact employee_id exists in dim_employee,FAIL,2,True,"PI-X0003, PI-X0004","Overstates payroll gross by 192,542.42"
+DQ-04,fact_ledger,PAYROLL_LEDGER_MISMATCH,DQ-C01,Monthly payroll employer cost = ledger salary-related expense (tolerance 0.01),FAIL,5,True,"JE-002094: JL-005614, JL-005643","June 2026 ledger salary expense is 18,450.00 above payroll"
+DQ-05,fact_invoice,OVERPAID_INVOICE,DQ-C07,balance_due >= 0 and amount_paid <= total_amount,WARN,1,True,INV-00385,Negative receivable of 100.00
+DQ-06,fact_task,COMPLETED_BEFORE_STARTED,DQ-C09,completed_date >= started_date,WARN,20,True,"TASK-19891, TASK-09527, TASK-06380, TASK-22599, TASK-27674, TASK-02895, TASK-17389, TASK-27078, TASK-10799, TASK-02741, TASK-07633, TASK-24674",Pulls average cycle time down
+DQ-07,fact_task,DONE_WITHOUT_DATE,DQ-C09,status = 'Done' implies completed_date is not null,WARN,20,True,"TASK-16893, TASK-13041, TASK-17714, TASK-26149, TASK-27926, TASK-03925, TASK-17544, TASK-17195",Understates on-time delivery rate
+DQ-08,fact_leave,END_BEFORE_START,DQ-C10,end_date >= start_date,WARN,2,True,"LR-002286, LR-000025",Negative duration if computed from dates
+DQ-09,fact_attrition_risk,STALE_PREDICTION,DQ-C11,as_of_date within 7 days of the latest as_of_date,WARN,5,True,"AR-0119, AR-0238, AR-0221, AR-0279, AR-0278",Old risk scores shown as current
+DQ-10,fact_expense,TOTAL_MISMATCH,DQ-C08,total_amount = amount_excl_gst + gst_amount,WARN,1,True,EXP-00371,Expense total overstated by 500.00
+DQ-11,dim_employee,SCD_INTERVAL_OVERLAP,DQ-C12,No overlap between valid_from/valid_to for the same employee,FAIL,1,True,100000,Fact rows in the overlap can join to two employee versions

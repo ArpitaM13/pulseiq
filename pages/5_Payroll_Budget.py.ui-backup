@@ -1,0 +1,32 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from src.dashboard_utils import metric, load_view, apply_period_filter, department_filter, money, privacy_note
+
+st.title("Payroll Cost & Budget")
+st.caption("Phase 2 · Tasks 9–10 — Employer cost, payroll mix, reconciliation and targets")
+pay=metric("M09")
+if pay.empty: st.info("Run the pipeline first."); st.stop()
+pay=apply_period_filter(pay); pay=department_filter(pay)
+visible=pay.dropna(subset=["metric_value"])
+if not visible.empty:
+    total=visible.groupby("period",as_index=False).metric_value.sum()
+    fig=px.line(total,x="period",y="metric_value",markers=True,title="Validated employer payroll cost by month",labels={"period":"Month","metric_value":"INR"})
+    st.plotly_chart(fig,use_container_width=True)
+for mid,title in [("M10","Cost per head"),("M11","Overtime share (%)"),("M12","Variable pay share (%)")]:
+    d=metric(mid).dropna(subset=["metric_value"])
+    if not d.empty:
+        d=apply_period_filter(d)
+        fig=px.line(d,x="period",y="metric_value",color="department_id",markers=True,title=title,labels={"period":"Month","metric_value":"Value"})
+        st.plotly_chart(fig,use_container_width=True)
+b=load_view("vw_budget_vs_actual")
+if not b.empty:
+    st.subheader("Budget versus actual")
+    b=apply_period_filter(b,date_col="month"); b=department_filter(b)
+    shown=b.dropna(subset=["visible_actual_cost","budget_cost"])
+    if not shown.empty:
+        fig=px.bar(shown,x="month",y=["visible_actual_cost","budget_cost"],barmode="group",color_discrete_sequence=["#2563eb","#94a3b8"],title="Budget versus actual payroll cost",labels={"month":"Month","value":"INR"})
+        st.plotly_chart(fig,use_container_width=True)
+        st.dataframe(shown[["month","department_id","visible_actual_cost","budget_cost","variance","variance_pct"]].sort_values("month",ascending=False),use_container_width=True,hide_index=True)
+    st.caption("Budget comparison is available only for department-months where both budget and validated payroll cost exist.")
+privacy_note()
