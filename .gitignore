@@ -5,3 +5,8 @@ __pycache__/
 *.py[cod]
 data/pulseiq.duckdb
 logs/*.log
+
+# Temporary local editing backups
+*.bak
+*.ui-backup
+*.encoding.bak
