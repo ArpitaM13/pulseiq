@@ -2,6 +2,8 @@
 __pycache__/
 .pytest_cache/
 .env
+.env.*
+!.env.example
 *.py[cod]
 data/pulseiq.duckdb
 logs/*.log
@@ -10,3 +12,5 @@ logs/*.log
 *.bak
 *.ui-backup
 *.encoding.bak
+
+/backups/

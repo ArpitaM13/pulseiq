@@ -293,6 +293,82 @@ def create_metric_views() -> None:
         FROM analytics.fact_task_valid t LEFT JOIN warehouse.dim_sprint s USING(sprint_id) GROUP BY 1,2,3
         """)
         con.execute("""
+        CREATE OR REPLACE VIEW analytics.vw_attendance_overtime_monthly AS
+        WITH monthly AS (
+            SELECT
+                CAST(date_trunc('month', period_end_date) AS DATE) AS period,
+                department_id,
+                SUM(overtime_hours)::DOUBLE AS overtime_hours_total,
+                COUNT(DISTINCT employee_id)::INTEGER AS employee_count
+            FROM analytics.fact_attendance_valid
+            GROUP BY 1, 2
+        )
+        SELECT
+            period,
+            department_id,
+            CASE
+                WHEN employee_count >= 5
+                THEN overtime_hours_total
+            END AS overtime_hours,
+            employee_count AS group_size,
+            5 AS min_group_size
+        FROM monthly
+        """)
+
+        con.execute("""
+        CREATE OR REPLACE VIEW analytics.vw_leave_days_monthly AS
+        WITH leave_dates AS (
+            SELECT
+                l.leave_request_id,
+                l.employee_id,
+                l.leave_type_code,
+                l.days,
+                CAST(d.date AS DATE) AS leave_date,
+                COUNT(*) OVER (
+                    PARTITION BY l.leave_request_id
+                ) AS working_days_in_request
+            FROM analytics.fact_leave_valid l
+            JOIN warehouse.dim_date d
+              ON CAST(d.date AS DATE)
+                 BETWEEN CAST(l.start_date AS DATE)
+                     AND CAST(l.end_date AS DATE)
+            WHERE l.status = 'Approved'
+              AND l.days > 0
+              AND UPPER(TRIM(d.is_working_day))
+                  IN ('Y', 'YES', 'TRUE', '1')
+        ),
+        monthly AS (
+            SELECT
+                CAST(date_trunc('month', leave_date) AS DATE) AS period,
+                leave_type_code,
+                COUNT(DISTINCT employee_id) AS employee_count,
+                SUM(
+                    CASE
+                        WHEN leave_type_code = 'ML'
+                        THEN days::DOUBLE /
+                             NULLIF(working_days_in_request, 0)
+                        ELSE 1.0
+                    END
+                ) AS allocated_leave_days
+            FROM leave_dates
+            GROUP BY 1, 2
+        )
+        SELECT
+            period,
+            leave_type_code,
+            CASE
+                WHEN employee_count >= 5
+                THEN ROUND(allocated_leave_days, 2)
+            END AS visible_leave_days,
+            CASE
+                WHEN employee_count >= 5
+                THEN employee_count
+            END AS group_size,
+            5 AS min_group_size
+        FROM monthly
+        """)
+
+        con.execute("""
         CREATE OR REPLACE VIEW analytics.vw_dq_results AS SELECT * FROM audit.dq_results
         """)
         con.execute("""
