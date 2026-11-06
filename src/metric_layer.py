@@ -241,12 +241,36 @@ def create_metric_views() -> None:
         """)
         con.execute("""
         CREATE OR REPLACE VIEW analytics.vw_finance_monthly AS
-        WITH rev AS (SELECT period, SUM(metric_value)::DOUBLE revenue FROM analytics.vw_metric_m16_revenue GROUP BY 1),
-        profit AS (SELECT period, metric_value::DOUBLE net_profit FROM analytics.vw_metric_m17_net_profit),
-        margin AS (SELECT period, metric_value::DOUBLE operating_margin_pct FROM analytics.vw_metric_m18_operating_margin),
-        payroll AS (SELECT period, metric_value::DOUBLE payroll_pct_revenue FROM analytics.vw_metric_m19_payroll_percent_revenue)
-        SELECT r.period, r.revenue, p.net_profit, m.operating_margin_pct, py.payroll_pct_revenue
-        FROM rev r LEFT JOIN profit p USING(period) LEFT JOIN margin m USING(period) LEFT JOIN payroll py USING(period)
+        WITH rev AS (
+            SELECT period, SUM(metric_value)::DOUBLE revenue
+            FROM analytics.vw_metric_m16_revenue GROUP BY 1
+        ),
+        expenses AS (
+            SELECT CAST(date_trunc('month', entry_date) AS DATE) period,
+                   SUM(signed_amount_debit_positive)::DOUBLE expenses
+            FROM warehouse.fact_ledger
+            WHERE TRY_CAST(account_code AS INTEGER) BETWEEN 5001 AND 5399
+            GROUP BY 1
+        ),
+        profit AS (
+            SELECT period, metric_value::DOUBLE net_profit
+            FROM analytics.vw_metric_m17_net_profit
+        ),
+        margin AS (
+            SELECT period, metric_value::DOUBLE operating_margin_pct
+            FROM analytics.vw_metric_m18_operating_margin
+        ),
+        payroll AS (
+            SELECT period, metric_value::DOUBLE payroll_pct_revenue
+            FROM analytics.vw_metric_m19_payroll_percent_revenue
+        )
+        SELECT r.period, r.revenue, e.expenses, p.net_profit,
+               m.operating_margin_pct, py.payroll_pct_revenue
+        FROM rev r
+        LEFT JOIN expenses e USING(period)
+        LEFT JOIN profit p USING(period)
+        LEFT JOIN margin m USING(period)
+        LEFT JOIN payroll py USING(period)
         """)
         con.execute("""
         CREATE OR REPLACE VIEW analytics.vw_invoice_aging AS
@@ -255,12 +279,50 @@ def create_metric_views() -> None:
         FROM analytics.fact_invoice_valid WHERE status NOT IN ('DRAFT','CANCELLED') AND balance_due>0
         GROUP BY 1
         """)
+
+        con.execute("""
+        CREATE OR REPLACE VIEW analytics.vw_cash_collections_monthly AS
+        SELECT
+            CAST(date_trunc('month', last_payment_date) AS DATE) AS period,
+            COUNT(DISTINCT invoice_id)::INTEGER AS invoices_paid,
+            SUM(amount_paid)::DOUBLE AS cash_collected
+        FROM analytics.fact_invoice_valid
+        WHERE last_payment_date IS NOT NULL
+          AND amount_paid > 0
+        GROUP BY 1
+        """)
         con.execute("""
         CREATE OR REPLACE VIEW analytics.vw_expense_monthly_department AS
         SELECT CAST(date_trunc('month',expense_date) AS DATE) period, department_id,
                SUM(total_amount)::DOUBLE total_expense, COUNT(*)::INTEGER bill_count
         FROM analytics.fact_expense_valid GROUP BY 1,2
         """)
+        con.execute("""
+        CREATE OR REPLACE VIEW analytics.vw_expense_by_category AS
+        SELECT
+            e.category_account,
+            a.account_name AS category,
+            SUM(e.amount_excl_gst)::DOUBLE AS spend,
+            COUNT(*)::INTEGER AS bill_count
+        FROM analytics.fact_expense_valid e
+        LEFT JOIN warehouse.dim_account a
+            ON e.category_account = a.account_code
+        GROUP BY 1, 2
+        """)
+
+        con.execute("""
+        CREATE OR REPLACE VIEW analytics.vw_top_vendors AS
+        SELECT
+            e.vendor_id,
+            v.vendor_name,
+            SUM(e.amount_excl_gst)::DOUBLE AS spend,
+            COUNT(*)::INTEGER AS bill_count
+        FROM analytics.fact_expense_valid e
+        LEFT JOIN warehouse.dim_vendor v
+            ON e.vendor_id = v.vendor_id
+        GROUP BY 1, 2
+        """)
+
         con.execute("""
         CREATE OR REPLACE VIEW analytics.vw_ai_anomaly_summary AS
         SELECT CAST(date_trunc('month',period) AS DATE) period, source_dataset, COUNT(*)::INTEGER scored_rows,
@@ -278,6 +340,20 @@ def create_metric_views() -> None:
                CASE WHEN COUNT(*)>=10 THEN COUNT(*)::INTEGER END group_size,
                CASE WHEN COUNT(*)>=10 THEN 100.0*COUNT(*) FILTER (WHERE risk_band='High')/NULLIF(COUNT(*),0) END high_risk_share_pct
         FROM analytics.fact_attrition_risk_valid r, latest l WHERE CAST(r.as_of_date AS DATE)=l.d GROUP BY 1,2
+        """)
+        con.execute("""
+        CREATE OR REPLACE VIEW analytics.vw_headcount_forecast AS
+        SELECT
+            CAST(forecast_month AS DATE) AS period,
+            department_id,
+            CAST(forecast_value AS DOUBLE) AS forecast_value,
+            CAST(lower_80 AS DOUBLE) AS lower_80,
+            CAST(upper_80 AS DOUBLE) AS upper_80,
+            method,
+            trained_through,
+            model_version
+        FROM warehouse.fact_forecast
+        WHERE metric = 'headcount_end'
         """)
         con.execute("""
         CREATE OR REPLACE VIEW analytics.vw_task_summary AS
@@ -389,26 +465,61 @@ def create_metric_views() -> None:
                pay.payroll_cost, att.present/NULLIF(att.scheduled,0) attendance_rate
         FROM months LEFT JOIN hc USING(period) LEFT JOIN pay USING(period) LEFT JOIN att USING(period)
         """)
+        
         con.execute("""
         CREATE OR REPLACE VIEW analytics.vw_location_summary AS
-        WITH latest AS (SELECT CAST(last_day(MAX(CAST(month_start_date AS DATE))) AS DATE) as_of_date FROM warehouse.fact_headcount_monthly)
-        SELECT COALESCE(l.work_location,'Unknown') work_location, COALESCE(l.state,'Unknown') state,
-               COALESCE(l.city_tier,'Unknown') city_tier,
-               CASE WHEN COUNT(DISTINCT e.employee_id)>=5 THEN COUNT(DISTINCT e.employee_id)::INTEGER END group_size,
-               CASE WHEN COUNT(DISTINCT e.employee_id)>=5 THEN COUNT(DISTINCT e.employee_id)::INTEGER END employee_count
-        FROM warehouse.dim_employee e LEFT JOIN warehouse.dim_location l ON e.work_location=l.work_location
+        WITH latest AS (
+            SELECT CAST(last_day(MAX(CAST(month_start_date AS DATE))) AS DATE) AS as_of_date
+            FROM warehouse.fact_headcount_monthly
+        )
+        SELECT
+            COALESCE(l.work_location, 'Unknown') AS work_location,
+            COALESCE(l.state, 'Unknown') AS state,
+            COALESCE(l.city_tier, 'Unknown') AS city_tier,
+            CASE
+                WHEN COUNT(DISTINCT e.employee_id) >= 5
+                THEN COUNT(DISTINCT e.employee_id)::INTEGER
+            END AS group_size,
+            CASE
+                WHEN COUNT(DISTINCT e.employee_id) >= 5
+                THEN COUNT(DISTINCT e.employee_id)::INTEGER
+            END AS employee_count
+        FROM warehouse.dim_employee e
+        LEFT JOIN warehouse.dim_location l
+            ON e.work_location = l.work_location
         CROSS JOIN latest a
-        WHERE e.is_current='Y' AND (e.exit_date IS NULL OR CAST(e.exit_date AS DATE)>a.as_of_date)
-        GROUP BY 1,2,3
+        WHERE e.is_current = 'Y'
+          AND (e.exit_date IS NULL OR CAST(e.exit_date AS DATE) > a.as_of_date)
+        GROUP BY 1, 2, 3
         """)
+
+        con.execute("""
+        CREATE OR REPLACE VIEW analytics.vw_department_lookup AS
+        SELECT
+            department_id,
+            department_name,
+            cost_center,
+            description,
+            is_leadership
+        FROM raw.dim_department
+        """)
+
+        con.execute("""
+        CREATE OR REPLACE VIEW analytics.vw_dq_results AS
+        SELECT * FROM audit.dq_results
+        """) if False else None
+
     finally:
         con.close()
 
 
 def main() -> None:
     create_metric_views()
-    print(f"Created {len(METRIC_VIEWS)} governed metric views plus supporting dashboard views.")
+    print(
+        f"Created {len(METRIC_VIEWS)} governed metric views "
+        "plus supporting dashboard views."
+    )
 
 
 if __name__ == "__main__":
-    create_metric_views()
+    main()
