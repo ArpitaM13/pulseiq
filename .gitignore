@@ -14,3 +14,9 @@ logs/*.log
 *.encoding.bak
 
 /backups/
+
+# Additional local virtual environments
+.venv_*/
+
+# Local requirements backup
+requirements.before-task16.txt

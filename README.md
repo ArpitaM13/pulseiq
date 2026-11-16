@@ -121,3 +121,40 @@ A test run should follow a successful pipeline run because the tests inspect the
 ## Status and production caveat
 
 This is a **local release candidate** intended for study, demonstration and review. The code builds locally reproducible ETL, warehouse, metric views, dashboards, reports and a read-only API. A cloud deployment, private GitHub access/collaboration, secrets review and actual programme-site submission must be completed using the user's own accounts. See `docs/implementation_status.md` for the task-by-task mapping and remaining release actions.
+
+## Task 16 - Automated Monthly Report Builder
+
+### Requirements
+- Python 3.10.11
+- All dependencies pinned in requirements.txt
+- Source workbook: data/raw/03_PulseIQ_Analytics_Star_Schema_Dataset.xlsx
+
+### Environment setup
+Create a virtual environment, activate it, install dependencies using `python -m pip install -r requirements.txt`, and verify with `python -m pip check`.
+
+### Run the pipeline
+`python run_pipeline.py`
+
+### Generate a monthly Excel report
+`python build_report.py --month 2026-09`
+
+Replace 2026-09 with the required reporting month in YYYY-MM format.
+
+Output: `reports/monthly_report_2026-09.xlsx`
+
+The workbook contains nine sheets: Executive Summary, Workforce KPIs, Finance, Expense Categories, Top Vendors, Expense Departments, Cash Collections, Data Quality, and Definitions and Notes.
+
+### Reconciliation checks
+- GST-inclusive expense totals are reconciled against the department expense view.
+- Expense bill counts are reconciled against the department expense view.
+- Both checks must pass for report generation to succeed.
+
+### Automated monthly execution
+Workflow: `.github/workflows/monthly-report.yml`
+
+The GitHub Actions workflow is scheduled for the first day of each month at 06:00 UTC. It rebuilds the database from the tracked source workbook, generates the previous month's report, and uploads it as an artifact retained for 30 days. It can also be started manually from the Actions tab.
+
+### Reproducibility and data-quality notes
+The report was tested in a separate Python 3.10.11 virtual environment. Pinned dependencies passed pip check, and the full pipeline and September 2026 report generation completed successfully.
+
+The training dataset contains known quality issues. Contract failures, DQ failures, and warnings are reported rather than hidden. Review these results before using the figures for business decisions.
