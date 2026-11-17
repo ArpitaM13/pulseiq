@@ -1,4 +1,5 @@
-﻿name: PulseIQ Monthly Report
+﻿
+name: PulseIQ Monthly Report
 
 on:
   schedule:
@@ -28,10 +29,33 @@ jobs:
       - name: Rebuild database and analytics pipeline
         run: python run_pipeline.py
 
-      - name: Determine previous month
+      - name: Determine latest available reporting month
         id: period
+        shell: bash
         run: |
-          MONTH=$(python -c "from datetime import date, timedelta; print((date.today().replace(day=1) - timedelta(days=1)).strftime('%Y-%m'))")
+          MONTH=$(python - <<'PY'
+          import duckdb
+
+          connection = duckdb.connect(
+              "data/pulseiq.duckdb",
+              read_only=True
+          )
+
+          result = connection.execute("""
+              SELECT strftime(MAX(period), '%Y-%m')
+              FROM analytics.vw_company_kpis
+          """).fetchone()[0]
+
+          connection.close()
+
+          if not result:
+              raise SystemExit("No reporting month found in vw_company_kpis.")
+
+          print(result)
+          PY
+          )
+
+          echo "Latest available reporting month: $MONTH"
           echo "month=$MONTH" >> "$GITHUB_OUTPUT"
 
       - name: Generate monthly Excel report
