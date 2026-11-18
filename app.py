@@ -1,17 +1,103 @@
-from __future__ import annotations
+﻿from __future__ import annotations
+
+import subprocess
+import sys
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from src.dashboard_utils import DB_FILE, load_view, money, money_compact, money_delta, pct, metric_line, metric_bar, privacy_note, empty_state
 
-st.set_page_config(page_title="PulseIQ Analytics", page_icon="📊", layout="wide")
-st.markdown("""<style>
-.block-container {padding-top: 1.6rem; max-width: 1450px}
-[data-testid="stMetric"] {background:#f4f7fb;border:1px solid #dbe3ef;padding:15px;border-radius:12px}
-[data-testid="stSidebar"] {background:#f7f9fc}
-</style>""", unsafe_allow_html=True)
+from src.dashboard_utils import (
+    ROOT,
+    DB_FILE,
+    load_view,
+    money,
+    money_compact,
+    money_delta,
+    pct,
+    metric_line,
+    metric_bar,
+    privacy_note,
+    empty_state,
+)
 
-if not DB_FILE.exists() or load_view("vw_company_kpis").empty:
+
+# Page configuration
+st.set_page_config(
+    page_title="PulseIQ Analytics",
+    page_icon="📊",
+    layout="wide",
+)
+
+
+# Dashboard styling
+st.markdown(
+    """
+    <style>
+    .block-container {
+        padding-top: 1.6rem;
+        max-width: 1450px;
+    }
+
+    [data-testid="stMetric"] {
+        background: #f4f7fb;
+        border: 1px solid #dbe3ef;
+        padding: 15px;
+        border-radius: 12px;
+    }
+
+    [data-testid="stSidebar"] {
+        background: #f7f9fc;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# Prepare database if it is missing
+if not DB_FILE.exists():
+
+    with st.spinner(
+        "Preparing PulseIQ analytics database. Please wait..."
+    ):
+        try:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "run_pipeline.py"),
+                ],
+                cwd=str(ROOT),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            if result.returncode != 0:
+                st.error("Database preparation failed.")
+
+                if result.stderr:
+                    st.subheader("Error details")
+                    st.code(result.stderr[-6000:])
+
+                if result.stdout:
+                    st.subheader("Pipeline output")
+                    st.code(result.stdout[-6000:])
+
+                st.stop()
+
+            load_view.clear()
+
+        except Exception as exc:
+            st.error(
+                "Unable to prepare the analytics database."
+            )
+            st.exception(exc)
+            st.stop()
+
+
+# Check analytics data
+if load_view("vw_company_kpis").empty:
     empty_state()
     st.stop()
 
