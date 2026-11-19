@@ -1,35 +1,165 @@
+
+import duckdb
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from src.dashboard_utils import metric, load_view, apply_period_filter, department_filter, money, privacy_note
+
+from src.dashboard_utils import (
+    ensure_database_ready,
+    DB_FILE,
+    metric,
+    load_view,
+    apply_period_filter,
+    department_filter,
+    money,
+    privacy_note,
+)
+
+# --------------------------------------------------
+# DATABASE READINESS
+# --------------------------------------------------
+
+try:
+    with st.spinner("Checking PulseIQ database..."):
+        ensure_database_ready()
+except Exception as exc:
+    st.error("Unable to prepare the PulseIQ database.")
+    st.exception(exc)
+    st.stop()
+
+
+# --------------------------------------------------
+# PAYROLL COST AND BUDGET
+# --------------------------------------------------
 
 st.title("Payroll Cost & Budget")
-st.caption("Phase 2  |  Tasks 9-10 - Employer cost, payroll mix, reconciliation and targets")
-pay=metric("M09")
-if pay.empty: st.info("Run the pipeline first."); st.stop()
-pay=apply_period_filter(pay, key_prefix="payroll_total"); pay=department_filter(pay, key_prefix="payroll_total")
-visible=pay.dropna(subset=["metric_value"])
+st.caption(
+    "Phase 2 | Tasks 9-10 - Employer cost, payroll mix, "
+    "reconciliation and targets"
+)
+
+pay = metric("M09")
+
+if pay.empty:
+    st.info("Run the pipeline first.")
+    st.stop()
+
+pay = apply_period_filter(pay, key_prefix="payroll_total")
+pay = department_filter(pay, key_prefix="payroll_total")
+
+visible = pay.dropna(subset=["metric_value"])
+
 if not visible.empty:
-    total=visible.groupby("period",as_index=False).metric_value.sum()
-    fig=px.line(total,x="period",y="metric_value",markers=True,title="Validated employer payroll cost by month",labels={"period":"Month","metric_value":"INR"})
-    st.plotly_chart(fig,width="stretch")
-for mid,title in [("M10","Cost per head"),("M11","Overtime share (%)"),("M12","Variable pay share (%)")]:
-    d=metric(mid).dropna(subset=["metric_value"])
+    total = visible.groupby("period", as_index=False).metric_value.sum()
+
+    fig = px.line(
+        total,
+        x="period",
+        y="metric_value",
+        markers=True,
+        title="Validated employer payroll cost by month",
+        labels={
+            "period": "Month",
+            "metric_value": "INR",
+        },
+    )
+
+    st.plotly_chart(fig, width="stretch")
+
+
+# --------------------------------------------------
+# PAYROLL MIX METRICS
+# --------------------------------------------------
+
+for mid, title in [
+    ("M10", "Cost per head"),
+    ("M11", "Overtime share (%)"),
+    ("M12", "Variable pay share (%)"),
+]:
+    d = metric(mid).dropna(subset=["metric_value"])
+
     if not d.empty:
-        d=apply_period_filter(d, key_prefix=f"payroll_{mid.lower()}")
-        fig=px.line(d,x="period",y="metric_value",color="department_id",markers=True,title=title,labels={"period":"Month","metric_value":"Value"})
-        st.plotly_chart(fig,width="stretch")
-b=load_view("vw_budget_vs_actual")
+        d = apply_period_filter(
+            d,
+            key_prefix=f"payroll_{mid.lower()}",
+        )
+
+        fig = px.line(
+            d,
+            x="period",
+            y="metric_value",
+            color="department_id",
+            markers=True,
+            title=title,
+            labels={
+                "period": "Month",
+                "metric_value": "Value",
+            },
+        )
+
+        st.plotly_chart(fig, width="stretch")
+
+
+# --------------------------------------------------
+# BUDGET VERSUS ACTUAL
+# --------------------------------------------------
+
+b = load_view("vw_budget_vs_actual")
+
 if not b.empty:
     st.subheader("Budget versus actual")
-    b=apply_period_filter(b, date_col="month", key_prefix="payroll_budget"); b=department_filter(b, key_prefix="payroll_budget")
-    shown=b.dropna(subset=["visible_actual_cost","budget_cost"])
+
+    b = apply_period_filter(
+        b,
+        date_col="month",
+        key_prefix="payroll_budget",
+    )
+    b = department_filter(
+        b,
+        key_prefix="payroll_budget",
+    )
+
+    shown = b.dropna(
+        subset=["visible_actual_cost", "budget_cost"]
+    )
+
     if not shown.empty:
-        fig=px.bar(shown,x="month",y=["visible_actual_cost","budget_cost"],barmode="group",color_discrete_sequence=["#2563eb","#94a3b8"],title="Budget versus actual payroll cost",labels={"month":"Month","value":"INR"})
-        st.plotly_chart(fig,width="stretch")
-        st.dataframe(shown[["month","department_id","visible_actual_cost","budget_cost","variance","variance_pct"]].sort_values("month",ascending=False),width="stretch",hide_index=True)
-    st.caption("Budget comparison is available only for department-months where both budget and validated payroll cost exist.")
-        # --------------------------------------------------
+        fig = px.bar(
+            shown,
+            x="month",
+            y=["visible_actual_cost", "budget_cost"],
+            barmode="group",
+            color_discrete_sequence=["#2563eb", "#94a3b8"],
+            title="Budget versus actual payroll cost",
+            labels={
+                "month": "Month",
+                "value": "INR",
+            },
+        )
+
+        st.plotly_chart(fig, width="stretch")
+
+        st.dataframe(
+            shown[
+                [
+                    "month",
+                    "department_id",
+                    "visible_actual_cost",
+                    "budget_cost",
+                    "variance",
+                    "variance_pct",
+                ]
+            ].sort_values("month", ascending=False),
+            width="stretch",
+            hide_index=True,
+        )
+
+    st.caption(
+        "Budget comparison is available only for department-months "
+        "where both budget and validated payroll cost exist."
+    )
+
+    # --------------------------------------------------
     # TASK 10: BUDGET VS ACTUAL ANALYSIS
     # --------------------------------------------------
 
@@ -37,14 +167,14 @@ if not b.empty:
     st.header("Task 10 - Budget vs Actual Analysis")
 
     if not shown.empty:
-
         total_budget = shown["budget_cost"].sum()
         total_actual = shown["visible_actual_cost"].sum()
         total_variance = total_actual - total_budget
 
         variance_pct = (
             100 * total_variance / total_budget
-            if total_budget != 0 else 0
+            if total_budget != 0
+            else 0
         )
 
         c1, c2, c3, c4 = st.columns(4)
@@ -65,7 +195,7 @@ if not b.empty:
             shown.groupby("department_id", as_index=False)
             .agg(
                 budget=("budget_cost", "sum"),
-                actual=("visible_actual_cost", "sum")
+                actual=("visible_actual_cost", "sum"),
             )
         )
 
@@ -74,110 +204,118 @@ if not b.empty:
         )
 
         dept_variance["variance_pct"] = (
-            100 * dept_variance["variance"]
+            100
+            * dept_variance["variance"]
             / dept_variance["budget"].replace(0, float("nan"))
         )
 
         dept_variance["status"] = dept_variance["variance"].apply(
-            lambda x: "Over Budget" if x > 0
-            else "Under Budget" if x < 0
-            else "On Budget"
-        )
-
-        fig = px.bar(
-            dept_variance.sort_values("variance"),
-            x="variance",
-            y="department_id",
-            orientation="h",
-            color="status",
-            title="Payroll Budget Variance by Department",
-            labels={
-                "variance": "Variance (INR)",
-                "department_id": "Department"
-            }
-        )
-
-        fig.add_vline(x=0, line_dash="dash")
-        st.plotly_chart(fig, width="stretch")
-
-        st.subheader("Budget Status Summary")
-
-        status_counts = shown.assign(
-            status=shown.apply(
-                lambda row: (
-                    "Over Budget"
-                    if row["visible_actual_cost"] > row["budget_cost"]
-                    else "Under Budget"
-                    if row["visible_actual_cost"] < row["budget_cost"]
-                    else "On Budget"
-                ),
-                axis=1
+            lambda x: (
+                "Over Budget"
+                if x > 0
+                else "Under Budget"
+                if x < 0
+                else "On Budget"
             )
-        )["status"].value_counts()
-
-        st.dataframe(
-            status_counts.rename_axis("Budget Status")
-            .reset_index(name="Department-Months"),
-            width="stretch",
-            hide_index=True
         )
 
-        st.subheader("Department Budget Performance")
+        if not dept_variance.empty:
+            fig = px.bar(
+                dept_variance.sort_values("variance"),
+                x="variance",
+                y="department_id",
+                orientation="h",
+                color="status",
+                title="Payroll Budget Variance by Department",
+                labels={
+                    "variance": "Variance (INR)",
+                    "department_id": "Department",
+                },
+            )
 
-        st.dataframe(
-            dept_variance.sort_values(
-                "variance", ascending=False
-            ).round(2),
-            width="stretch",
-            hide_index=True
-        )
+            fig.add_vline(x=0, line_dash="dash")
+            st.plotly_chart(fig, width="stretch")
 
-        st.subheader("Key Findings")
+            st.subheader("Budget Status Summary")
 
-        highest_over = dept_variance.loc[
-            dept_variance["variance"].idxmax()
-        ]
+            status_counts = shown.assign(
+                status=shown.apply(
+                    lambda row: (
+                        "Over Budget"
+                        if row["visible_actual_cost"] > row["budget_cost"]
+                        else "Under Budget"
+                        if row["visible_actual_cost"] < row["budget_cost"]
+                        else "On Budget"
+                    ),
+                    axis=1,
+                )
+            )["status"].value_counts()
 
-        highest_saving = dept_variance.loc[
-            dept_variance["variance"].idxmin()
-        ]
+            st.dataframe(
+                status_counts.rename_axis("Budget Status")
+                .reset_index(name="Department-Months"),
+                width="stretch",
+                hide_index=True,
+            )
 
-        st.write(
-            f"1. Overall payroll variance is "
-            f"{variance_pct:+.2f}% against budget."
-        )
+            st.subheader("Department Budget Performance")
 
-        st.write(
-            f"2. {highest_over['department_id']} has the "
-            f"highest absolute overspending at "
-            f"{money(highest_over['variance'])}."
-        )
+            st.dataframe(
+                dept_variance.sort_values(
+                    "variance",
+                    ascending=False,
+                ).round(2),
+                width="stretch",
+                hide_index=True,
+            )
 
-        st.write(
-            f"3. {highest_saving['department_id']} has the "
-            f"largest savings at "
-            f"{money(abs(highest_saving['variance']))}."
-        )
+            st.subheader("Key Findings")
 
-        st.caption(
-            "All calculations use only department-month records "
-            "where validated payroll cost and budget are available. "
-            "Results follow the selected date and department filters."
-        )
-    # --------------------------------------------------
+            highest_over = dept_variance.loc[
+                dept_variance["variance"].idxmax()
+            ]
+
+            highest_saving = dept_variance.loc[
+                dept_variance["variance"].idxmin()
+            ]
+
+            st.write(
+                f"1. Overall payroll variance is "
+                f"{variance_pct:+.2f}% against budget."
+            )
+
+            st.write(
+                f"2. {highest_over['department_id']} has the "
+                f"highest absolute overspending at "
+                f"{money(highest_over['variance'])}."
+            )
+
+            st.write(
+                f"3. {highest_saving['department_id']} has the "
+                f"largest savings at "
+                f"{money(abs(highest_saving['variance']))}."
+            )
+
+            st.caption(
+                "All calculations use only department-month records "
+                "where validated payroll cost and budget are available. "
+                "Results follow the selected date and department filters."
+            )
+
+
+# --------------------------------------------------
 # TASK 9: PAYROLL RECONCILIATION
 # --------------------------------------------------
 
-import duckdb
-
 st.divider()
-st.header("Task 9 — Payroll Reconciliation")
+st.header("Task 9 - Payroll Reconciliation")
+
 st.caption(
     "Monthly payroll validation against the reconciliation "
     "reference, including ledger expense comparison."
 )
 
-con = duckdb.connect("data/pulseiq.duckdb", read_only=True)
+con = duckdb.connect(str(DB_FILE), read_only=True)
 
 try:
     reconciliation = con.execute("""
@@ -228,7 +366,7 @@ try:
             "gross_difference",
             "net_difference",
             "employer_cost_difference",
-            "ledger_difference"
+            "ledger_difference",
         ]
 
         matched = (
@@ -251,13 +389,13 @@ try:
         c2.metric("Months Reconciled", months_matched)
         c3.metric(
             "Months With Exceptions",
-            months_checked - months_matched
+            months_checked - months_matched,
         )
 
         st.dataframe(
             reconciliation,
             width="stretch",
-            hide_index=True
+            hide_index=True,
         )
 
         if months_matched == months_checked:
@@ -306,7 +444,7 @@ try:
     st.dataframe(
         validation,
         width="stretch",
-        hide_index=True
+        hide_index=True,
     )
 
     st.caption(
@@ -324,4 +462,10 @@ try:
 
 finally:
     con.close()
+
+
+# --------------------------------------------------
+# PRIVACY NOTE
+# --------------------------------------------------
+
 privacy_note()

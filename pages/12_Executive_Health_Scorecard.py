@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 
 from src.dashboard_utils import (
+    ensure_database_ready,
     metric,
     load_view,
     money_compact,
@@ -19,9 +20,25 @@ st.set_page_config(
     layout="wide",
 )
 
+# --------------------------------------------------
+# Database Readiness
+# --------------------------------------------------
+
+try:
+    with st.spinner("Checking PulseIQ database..."):
+        ensure_database_ready()
+except Exception as exc:
+    st.error("Unable to prepare the PulseIQ database.")
+    st.exception(exc)
+    st.stop()
+
+# --------------------------------------------------
+# Page Title
+# --------------------------------------------------
+
 st.title("Executive Company-Health Scorecard")
 st.caption(
-    "Phase 3 | Task 15 — Eight headline KPIs "
+    "Phase 3 | Task 15 - Eight headline KPIs "
     "for workforce, finance, collections and delivery"
 )
 
@@ -42,7 +59,10 @@ if all(df.empty for df in data.values()):
     st.info("Run the pipeline first, then refresh this page.")
     st.stop()
 
+# --------------------------------------------------
 # Convert dates
+# --------------------------------------------------
+
 for df in data.values():
     if not df.empty:
         df["period"] = pd.to_datetime(

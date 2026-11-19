@@ -1,3 +1,4 @@
+
 """Shared helpers for the Streamlit UI.
 Pages query governed analytics views only.
 """
@@ -5,6 +6,12 @@ Pages query governed analytics views only.
 from __future__ import annotations
 
 from pathlib import Path
+from contextlib import contextmanager
+import os
+import subprocess
+import sys
+import threading
+import time
 
 import duckdb
 import pandas as pd
@@ -21,7 +28,140 @@ DB_FILE = ROOT / "data" / "pulseiq.duckdb"
 
 
 # --------------------------------------------------
-# 2. Load governed analytics views
+# 2. Database readiness and startup protection
+# --------------------------------------------------
+
+@st.cache_resource(show_spinner=False)
+def _get_database_thread_lock():
+    """Share one initialization lock across Streamlit sessions."""
+    return threading.Lock()
+
+
+@contextmanager
+def _database_process_lock():
+    """Prevent multiple processes from rebuilding DuckDB together."""
+
+    DB_FILE.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = DB_FILE.parent / ".pulseiq_pipeline.lock"
+
+    with lock_path.open("a+b") as handle:
+
+        if os.name == "nt":
+            import msvcrt
+
+            handle.seek(0, os.SEEK_END)
+
+            if handle.tell() == 0:
+                handle.write(b"\0")
+                handle.flush()
+
+            handle.seek(0)
+
+            deadline = time.monotonic() + 900
+
+            while True:
+                try:
+                    msvcrt.locking(
+                        handle.fileno(),
+                        msvcrt.LK_NBLCK,
+                        1,
+                    )
+                    break
+                except OSError:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError(
+                            "Timed out waiting for the database startup lock."
+                        )
+                    time.sleep(0.5)
+
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+
+        try:
+            yield
+        finally:
+            if os.name == "nt":
+                handle.seek(0)
+                msvcrt.locking(
+                    handle.fileno(),
+                    msvcrt.LK_UNLCK,
+                    1,
+                )
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def _database_is_ready() -> bool:
+    """Check that the required governed analytics views exist."""
+
+    if not DB_FILE.is_file():
+        return False
+
+    con = duckdb.connect(str(DB_FILE), read_only=True)
+
+    try:
+        existing_views = {
+            row[0]
+            for row in con.execute("""
+                SELECT table_name
+                FROM information_schema.views
+                WHERE table_schema = 'analytics'
+            """).fetchall()
+        }
+
+        required_views = {
+            "vw_company_kpis",
+            "vw_all_metrics",
+        }
+
+        return required_views.issubset(existing_views)
+
+    finally:
+        con.close()
+
+
+def ensure_database_ready() -> bool:
+    """Validate the database and build it once when necessary."""
+
+    with _get_database_thread_lock():
+
+        with _database_process_lock():
+
+            if _database_is_ready():
+                return True
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "run_pipeline.py"),
+                ],
+                cwd=str(ROOT),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=900,
+            )
+
+            if result.returncode != 0:
+                raise RuntimeError(
+                    "PulseIQ pipeline failed during database initialization.\n\n"
+                    f"STDOUT:\n{result.stdout}\n\n"
+                    f"STDERR:\n{result.stderr}"
+                )
+
+            if not _database_is_ready():
+                raise RuntimeError(
+                    "Pipeline finished, but required analytics views "
+                    "are still missing."
+                )
+
+            return True
+
+
+# --------------------------------------------------
+# 3. Load governed analytics views
 # --------------------------------------------------
 
 @st.cache_data(ttl=60, show_spinner=False)
@@ -37,8 +177,7 @@ def load_view(view_name: str) -> pd.DataFrame:
             "into the dashboard."
         )
 
-    if not DB_FILE.exists():
-        return pd.DataFrame()
+    ensure_database_ready()
 
     con = duckdb.connect(str(DB_FILE), read_only=True)
 
@@ -78,7 +217,7 @@ def metric(metric_id: str) -> pd.DataFrame:
 
 
 # --------------------------------------------------
-# 3. Formatting helpers
+# 4. Formatting helpers
 # --------------------------------------------------
 
 def money(value) -> str:
@@ -142,7 +281,7 @@ def pct(value, multiplier=1.0) -> str:
 
 
 # --------------------------------------------------
-# 4. Date-range filter
+# 5. Date-range filter
 # --------------------------------------------------
 
 def apply_period_filter(
@@ -205,7 +344,7 @@ def apply_period_filter(
 
 
 # --------------------------------------------------
-# 5. Department filter
+# 6. Department filter
 # --------------------------------------------------
 
 def department_filter(
@@ -242,7 +381,7 @@ def department_filter(
 
 
 # --------------------------------------------------
-# 6. Line chart
+# 7. Line chart
 # --------------------------------------------------
 
 def metric_line(
@@ -302,7 +441,7 @@ def metric_line(
 
 
 # --------------------------------------------------
-# 7. Bar chart
+# 8. Bar chart
 # --------------------------------------------------
 
 def metric_bar(
@@ -372,7 +511,7 @@ def metric_bar(
 
 
 # --------------------------------------------------
-# 8. Privacy message
+# 9. Privacy message
 # --------------------------------------------------
 
 def privacy_note() -> None:
@@ -387,7 +526,7 @@ def privacy_note() -> None:
 
 
 # --------------------------------------------------
-# 9. Empty database state
+# 10. Empty database state
 # --------------------------------------------------
 
 def empty_state() -> None:

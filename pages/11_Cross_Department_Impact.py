@@ -1,9 +1,25 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-from src.dashboard_utils import load_view, privacy_note
+from src.dashboard_utils import (
+    ensure_database_ready,
+    load_view,
+    privacy_note,
+)
 
+# --------------------------------------------------
+# DATABASE READINESS
+# --------------------------------------------------
+
+try:
+    with st.spinner("Checking PulseIQ database..."):
+        ensure_database_ready()
+except Exception as exc:
+    st.error("Unable to prepare the PulseIQ database.")
+    st.exception(exc)
+    st.stop()
 
 # --------------------------------------------------
 # PAGE CONFIGURATION
@@ -15,7 +31,6 @@ st.caption(
     "Phase 3 | Task 13 - Department-wise workforce, "
     "attendance, attrition, payroll and operational impact"
 )
-
 
 # --------------------------------------------------
 # LOAD GOVERNED ANALYTICS VIEWS
@@ -36,7 +51,6 @@ if departments.empty:
     st.warning("Department lookup is unavailable.")
     st.stop()
 
-
 # --------------------------------------------------
 # DEPARTMENT NAME MAPPING
 # --------------------------------------------------
@@ -44,7 +58,6 @@ if departments.empty:
 department_map = departments.set_index(
     "department_id"
 )["department_name"].to_dict()
-
 
 # --------------------------------------------------
 # REPORTING PERIOD
@@ -59,8 +72,10 @@ def filter_period(df):
 
     if "period" in df.columns:
         df["period"] = pd.to_datetime(
-            df["period"], errors="coerce"
+            df["period"],
+            errors="coerce"
         )
+
         df = df[
             (df["period"] >= start_date)
             & (df["period"] <= end_date)
@@ -108,7 +123,6 @@ if base.empty:
     st.info("No comparable department data is available.")
     st.stop()
 
-
 # --------------------------------------------------
 # FILTERS
 # --------------------------------------------------
@@ -133,7 +147,6 @@ if base.empty:
     st.warning("Select at least one department.")
     st.stop()
 
-
 # --------------------------------------------------
 # LATEST DEPARTMENT SNAPSHOT
 # --------------------------------------------------
@@ -148,7 +161,6 @@ st.caption(
     f"Latest workforce reporting period: "
     f"{latest_period.strftime('%B %Y')}"
 )
-
 
 # --------------------------------------------------
 # KPI CARDS
@@ -194,7 +206,6 @@ c4.metric(
     if pd.notna(avg_attrition) else "N/A"
 )
 
-
 # --------------------------------------------------
 # DEPARTMENT WORKFORCE COMPARISON
 # --------------------------------------------------
@@ -231,7 +242,6 @@ with b:
     )
 
     st.plotly_chart(fig, width="stretch")
-
 
 # --------------------------------------------------
 # ATTENDANCE AND ATTRITION
@@ -282,7 +292,6 @@ with b:
 
     st.plotly_chart(fig, width="stretch")
 
-
 # --------------------------------------------------
 # ATTENDANCE VS ATTRITION
 # --------------------------------------------------
@@ -314,7 +323,6 @@ fig = px.scatter(
 
 st.plotly_chart(fig, width="stretch")
 
-
 # --------------------------------------------------
 # OVERTIME ANALYSIS
 # --------------------------------------------------
@@ -335,24 +343,26 @@ if not overtime.empty:
         )
     ]
 
-    fig = px.bar(
-        overtime,
-        x="period",
-        y="overtime_hours",
-        color="department_name",
-        title="Monthly Overtime Hours by Department",
-        labels={
-            "period": "Month",
-            "overtime_hours": "Overtime Hours",
-            "department_name": "Department"
-        },
-        barmode="group"
-    )
+    if not overtime.empty:
+        fig = px.bar(
+            overtime,
+            x="period",
+            y="overtime_hours",
+            color="department_name",
+            title="Monthly Overtime Hours by Department",
+            labels={
+                "period": "Month",
+                "overtime_hours": "Overtime Hours",
+                "department_name": "Department"
+            },
+            barmode="group"
+        )
 
-    st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, width="stretch")
+    else:
+        st.info("No overtime records for selected departments.")
 else:
     st.info("Overtime data is unavailable.")
-
 
 # --------------------------------------------------
 # ATTRITION RISK
@@ -390,21 +400,24 @@ if not risk.empty:
         st.plotly_chart(fig, width="stretch")
 
         st.dataframe(
-            risk[[
-                "department_name",
-                "employee_count",
-                "high_risk_count",
-                "high_risk_share_pct"
-            ]].sort_values(
+            risk[
+                [
+                    "department_name",
+                    "employee_count",
+                    "high_risk_count",
+                    "high_risk_share_pct"
+                ]
+            ].sort_values(
                 "high_risk_share_pct",
                 ascending=False
             ),
             width="stretch",
             hide_index=True
         )
+    else:
+        st.info("No risk records for selected departments.")
 else:
     st.info("Attrition risk data is unavailable.")
-
 
 # --------------------------------------------------
 # DEPARTMENT EXPENSES
@@ -426,24 +439,26 @@ if not expenses.empty:
         )
     ]
 
-    fig = px.bar(
-        expenses,
-        x="period",
-        y="total_expense",
-        color="department_name",
-        title="Monthly Expenses by Department",
-        labels={
-            "period": "Month",
-            "total_expense": "Expense (INR)",
-            "department_name": "Department"
-        },
-        barmode="group"
-    )
+    if not expenses.empty:
+        fig = px.bar(
+            expenses,
+            x="period",
+            y="total_expense",
+            color="department_name",
+            title="Monthly Expenses by Department",
+            labels={
+                "period": "Month",
+                "total_expense": "Expense (INR)",
+                "department_name": "Department"
+            },
+            barmode="group"
+        )
 
-    st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, width="stretch")
+    else:
+        st.info("No expense records for selected departments.")
 else:
     st.info("Department expense data is unavailable.")
-
 
 # --------------------------------------------------
 # LEAVE TRENDS
@@ -476,7 +491,6 @@ if not leave.empty:
 else:
     st.info("Leave data is unavailable.")
 
-
 # --------------------------------------------------
 # DETAILED DEPARTMENT DATA
 # --------------------------------------------------
@@ -498,7 +512,6 @@ st.dataframe(
     width="stretch",
     hide_index=True
 )
-
 
 # --------------------------------------------------
 # GOVERNANCE AND INTERPRETATION

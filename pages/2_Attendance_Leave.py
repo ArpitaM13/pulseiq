@@ -4,12 +4,26 @@ import pandas as pd
 import plotly.express as px
 
 from src.dashboard_utils import (
+    ensure_database_ready,
     metric,
     load_view,
     apply_period_filter,
     department_filter,
     privacy_note,
 )
+
+# ============================================================
+# DATABASE READINESS
+# ============================================================
+
+try:
+    with st.spinner("Checking PulseIQ database..."):
+        ensure_database_ready()
+except Exception as exc:
+    st.error("Unable to prepare the PulseIQ database.")
+    st.exception(exc)
+    st.stop()
+
 
 # ============================================================
 # PHASE 2 - TASK 6: ATTENDANCE & LEAVE ANALYTICS
@@ -41,12 +55,12 @@ if attendance.empty:
 
 attendance = apply_period_filter(
     attendance,
-    key_prefix="attendance_rate"
+    key_prefix="attendance_rate",
 )
 
 attendance = department_filter(
     attendance,
-    key_prefix="attendance_rate"
+    key_prefix="attendance_rate",
 )
 
 attendance = attendance.copy()
@@ -67,8 +81,8 @@ if not attendance_visible.empty:
         labels={
             "period": "Month",
             "attendance_pct": "Attendance (%)",
-            "department_id": "Department"
-        }
+            "department_id": "Department",
+        },
     )
 
     st.plotly_chart(fig, width="stretch")
@@ -94,12 +108,12 @@ late = metric("M14").copy()
 if not late.empty:
     late = apply_period_filter(
         late,
-        key_prefix="late_arrivals"
+        key_prefix="late_arrivals",
     )
 
     late = department_filter(
         late,
-        key_prefix="late_arrivals"
+        key_prefix="late_arrivals",
     )
 
     late["late_per_present_day"] = late["metric_value"]
@@ -119,8 +133,8 @@ if not late.empty:
             labels={
                 "period": "Month",
                 "late_per_present_day": "Late Arrival Ratio",
-                "department_id": "Department"
-            }
+                "department_id": "Department",
+            },
         )
 
         st.plotly_chart(fig, width="stretch")
@@ -141,12 +155,12 @@ overtime = load_view("vw_attendance_overtime_monthly")
 if not overtime.empty:
     overtime = apply_period_filter(
         overtime,
-        key_prefix="overtime_hours"
+        key_prefix="overtime_hours",
     )
 
     overtime = department_filter(
         overtime,
-        key_prefix="overtime_hours"
+        key_prefix="overtime_hours",
     )
 
     overtime = overtime.dropna(
@@ -164,8 +178,8 @@ if not overtime.empty:
             labels={
                 "period": "Month",
                 "overtime_hours": "Overtime Hours",
-                "department_id": "Department"
-            }
+                "department_id": "Department",
+            },
         )
 
         st.plotly_chart(fig, width="stretch")
@@ -201,8 +215,8 @@ if not leave.empty:
             labels={
                 "leave_type_code": "Leave Type",
                 "visible_request_count": "Requests",
-                "status": "Status"
-            }
+                "status": "Status",
+            },
         )
 
         st.plotly_chart(fig, width="stretch")
@@ -227,11 +241,16 @@ st.subheader("Monthly Leave Days by Type")
 leave_days = load_view("vw_leave_days_monthly")
 
 if not leave_days.empty:
-
-    # Restrict to the attendance reporting period
+    # Restrict to the attendance reporting period.
     leave_days = leave_days.copy()
+
     leave_days["period"] = pd.to_datetime(
-        leave_days["period"]
+        leave_days["period"],
+        errors="coerce",
+    )
+
+    leave_days = leave_days.dropna(
+        subset=["period"]
     )
 
     leave_days = leave_days[
@@ -242,7 +261,7 @@ if not leave_days.empty:
     if not leave_days.empty:
         leave_days = apply_period_filter(
             leave_days,
-            key_prefix="monthly_leave_days"
+            key_prefix="monthly_leave_days",
         )
 
         leave_days = leave_days.dropna(
@@ -260,8 +279,8 @@ if not leave_days.empty:
                 labels={
                     "period": "Month",
                     "visible_leave_days": "Leave Days",
-                    "leave_type_code": "Leave Type"
-                }
+                    "leave_type_code": "Leave Type",
+                },
             )
 
             st.plotly_chart(fig, width="stretch")
@@ -336,54 +355,54 @@ holiday_data = pd.DataFrame([
     {
         "Holiday": "14 April 2025",
         "Day": "Monday",
-        "Long Weekend": "12-14 April 2025"
+        "Long Weekend": "12-14 April 2025",
     },
     {
         "Holiday": "18 April 2025",
         "Day": "Friday",
-        "Long Weekend": "18-20 April 2025"
+        "Long Weekend": "18-20 April 2025",
     },
     {
         "Holiday": "15 August 2025",
         "Day": "Friday",
-        "Long Weekend": "15-17 August 2025"
+        "Long Weekend": "15-17 August 2025",
     },
     {
         "Holiday": "20-21 October 2025",
         "Day": "Monday-Tuesday",
-        "Long Weekend": "18-21 October 2025"
+        "Long Weekend": "18-21 October 2025",
     },
     {
         "Holiday": "26 January 2026",
         "Day": "Monday",
-        "Long Weekend": "24-26 January 2026"
+        "Long Weekend": "24-26 January 2026",
     },
     {
         "Holiday": "20 March 2026",
         "Day": "Friday",
-        "Long Weekend": "20-22 March 2026"
+        "Long Weekend": "20-22 March 2026",
     },
     {
         "Holiday": "3 April 2026",
         "Day": "Friday",
-        "Long Weekend": "3-5 April 2026"
+        "Long Weekend": "3-5 April 2026",
     },
     {
         "Holiday": "1 May 2026",
         "Day": "Friday",
-        "Long Weekend": "1-3 May 2026"
+        "Long Weekend": "1-3 May 2026",
     },
     {
         "Holiday": "14 September 2026",
         "Day": "Monday",
-        "Long Weekend": "12-14 September 2026"
-    }
+        "Long Weekend": "12-14 September 2026",
+    },
 ])
 
 st.dataframe(
     holiday_data,
     width="stretch",
-    hide_index=True
+    hide_index=True,
 )
 
 st.caption(

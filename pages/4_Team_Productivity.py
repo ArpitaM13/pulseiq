@@ -1,9 +1,12 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import duckdb
 
 from src.dashboard_utils import (
+    ensure_database_ready,
+    DB_FILE,
     metric,
     privacy_note,
 )
@@ -26,13 +29,27 @@ MIN_GROUP_SIZE = 5
 
 
 # ============================================================
+# DATABASE READINESS
+# ============================================================
+
+try:
+    with st.spinner("Checking PulseIQ database..."):
+        ensure_database_ready()
+except Exception as exc:
+    st.error("Unable to prepare the PulseIQ database.")
+    st.exception(exc)
+    st.stop()
+
+
+# ============================================================
 # LOAD GOVERNED TEAM-SPRINT SUMMARY
 # ============================================================
 
 @st.cache_data
 def load_team_summary():
+
     con = duckdb.connect(
-        "data/pulseiq.duckdb",
+        str(DB_FILE),
         read_only=True,
     )
 
@@ -41,14 +58,16 @@ def load_team_summary():
             SELECT *
             FROM analytics.vw_task_summary
         """).df()
+
     finally:
         con.close()
 
 
 @st.cache_data
 def load_reopened_summary():
+
     con = duckdb.connect(
-        "data/pulseiq.duckdb",
+        str(DB_FILE),
         read_only=True,
     )
 
@@ -73,6 +92,7 @@ def load_reopened_summary():
                 t.sprint_id,
                 t.team_id
         """).df()
+
     finally:
         con.close()
 
@@ -194,6 +214,7 @@ reopened = reopened[
     & (reopened["sprint_start"].dt.date >= start_date)
     & (reopened["sprint_start"].dt.date <= end_date)
 ].copy()
+
 
 # ============================================================
 # PRIVACY THRESHOLD
@@ -333,7 +354,6 @@ for metric_id, chart_title, y_label in metric_configs:
 
     data = data.copy()
 
-    # Check the columns required for governed metric filtering.
     required_metric_columns = {
         "period",
         "dimension_label",
@@ -367,14 +387,7 @@ for metric_id, chart_title, y_label in metric_configs:
         & (data["period"].dt.date <= end_date)
     ].copy()
 
-    # --------------------------------------------------------
-    # CORRECTED TEAM FILTER
-    # Labels look like "T05 / SP-01".
-    # Extract the team ID before "/" and match it exactly.
-    # This prevents a team such as T1 from accidentally
-    # matching a different team such as T10.
-    # --------------------------------------------------------
-
+    # Extract team ID from labels such as "T05 / SP-01".
     data["team_id_filter"] = (
         data["dimension_label"]
         .astype(str)
@@ -398,7 +411,6 @@ for metric_id, chart_title, y_label in metric_configs:
     )
 
     # Apply the governed minimum group-size threshold.
-    # Use the metric's own threshold when provided.
     if "group_size" in data.columns:
 
         data["group_size"] = pd.to_numeric(

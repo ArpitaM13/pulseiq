@@ -1,15 +1,32 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import duckdb
 
 from src.dashboard_utils import (
+    ensure_database_ready,
+    DB_FILE,
     metric,
     load_view,
     apply_period_filter,
     department_filter,
     privacy_note,
 )
+
+
+# ============================================================
+# 1. DATABASE READINESS
+# ============================================================
+
+try:
+    with st.spinner("Checking PulseIQ database..."):
+        ensure_database_ready()
+except Exception as exc:
+    st.error("Unable to prepare the PulseIQ database.")
+    st.exception(exc)
+    st.stop()
+
 
 # ============================================================
 # PHASE 2 - TASK 7: ATTRITION ANALYTICS
@@ -39,9 +56,7 @@ def show_safe_bar_chart(
     title,
     x_label,
 ):
-    """
-    Display only groups containing at least five exits.
-    """
+    """Display only groups containing at least five exits."""
 
     if data.empty:
         st.info("No exit data is available for this chart.")
@@ -79,10 +94,7 @@ def show_safe_bar_chart(
         margin=dict(t=65, b=40),
     )
 
-    st.plotly_chart(
-        fig,
-        width="stretch",
-    )
+    st.plotly_chart(fig, width="stretch")
 
     suppressed = int(
         (
@@ -106,7 +118,7 @@ def show_safe_bar_chart(
 def load_employee_exits():
 
     con = duckdb.connect(
-        "data/pulseiq.duckdb",
+        str(DB_FILE),
         read_only=True,
     )
 
@@ -163,6 +175,7 @@ exits = load_employee_exits()
 # Ensure the dashboard can be refreshed without stale cached data.
 if st.sidebar.button("Refresh attrition data"):
     load_employee_exits.clear()
+    load_view.clear()
     st.rerun()
 
 
@@ -224,20 +237,9 @@ if not exits.empty:
 
     col1, col2, col3 = st.columns(3)
 
-    col1.metric(
-        "Total Exits",
-        f"{total_exits:,}",
-    )
-
-    col2.metric(
-        "Resignations",
-        f"{resignations:,}",
-    )
-
-    col3.metric(
-        "Other Exits",
-        f"{other_exits:,}",
-    )
+    col1.metric("Total Exits", f"{total_exits:,}")
+    col2.metric("Resignations", f"{resignations:,}")
+    col3.metric("Other Exits", f"{other_exits:,}")
 
     st.caption(
         "Employees are deduplicated using their latest "
@@ -246,22 +248,13 @@ if not exits.empty:
         "endings are other exits."
     )
 
-    # --------------------------------------------------------
-    # MONTHLY EXITS
-    # --------------------------------------------------------
-
+    # Monthly exits
     st.subheader("Employee Exits by Month")
 
     monthly_exits = (
-        exits.groupby(
-            "period",
-            as_index=False,
-        )
+        exits.groupby("period", as_index=False)
         .agg(
-            employee_exits=(
-                "employee_id",
-                "nunique",
-            )
+            employee_exits=("employee_id", "nunique")
         )
         .sort_values("period")
     )
@@ -273,10 +266,7 @@ if not exits.empty:
         "Month",
     )
 
-    # --------------------------------------------------------
-    # DEPARTMENT EXITS
-    # --------------------------------------------------------
-
+    # Department exits
     st.subheader("Employee Exits by Department")
 
     dept_exits = (
@@ -286,10 +276,7 @@ if not exits.empty:
             as_index=False,
         )
         .agg(
-            employee_exits=(
-                "employee_id",
-                "nunique",
-            )
+            employee_exits=("employee_id", "nunique")
         )
     )
 
@@ -305,10 +292,7 @@ if not exits.empty:
         "employee record. Exit counts are not attrition rates."
     )
 
-    # --------------------------------------------------------
-    # TENURE ANALYSIS
-    # --------------------------------------------------------
-
+    # Tenure analysis
     st.subheader("Employee Exits by Tenure")
 
     tenure_data = exits.dropna(
@@ -353,10 +337,7 @@ if not exits.empty:
             as_index=False,
         )
         .agg(
-            employee_exits=(
-                "employee_id",
-                "nunique",
-            )
+            employee_exits=("employee_id", "nunique")
         )
     )
 
@@ -374,22 +355,13 @@ if not exits.empty:
         "tenure-specific attrition rates."
     )
 
-    # --------------------------------------------------------
-    # EXIT TYPE ANALYSIS
-    # --------------------------------------------------------
-
+    # Exit type analysis
     st.subheader("Voluntary vs Other Employee Exits")
 
     exit_types = (
-        exits.groupby(
-            "exit_type",
-            as_index=False,
-        )
+        exits.groupby("exit_type", as_index=False)
         .agg(
-            employee_exits=(
-                "employee_id",
-                "nunique",
-            )
+            employee_exits=("employee_id", "nunique")
         )
     )
 
@@ -413,10 +385,7 @@ else:
     other_exits = 0
 
     tenure_data = pd.DataFrame(
-        columns=[
-            "employee_id",
-            "tenure_group",
-        ]
+        columns=["employee_id", "tenure_group"]
     )
 
     st.info(
@@ -447,9 +416,7 @@ for metric_id, chart_title in metric_charts:
     data = metric(metric_id)
 
     if data.empty:
-        st.info(
-            f"{chart_title} data is unavailable."
-        )
+        st.info(f"{chart_title} data is unavailable.")
         continue
 
     data = data.copy()
@@ -459,9 +426,7 @@ for metric_id, chart_title in metric_charts:
         errors="coerce",
     )
 
-    data = data.dropna(
-        subset=["period"]
-    )
+    data = data.dropna(subset=["period"])
 
     data = data[
         data["period"].between(
@@ -524,10 +489,7 @@ for metric_id, chart_title in metric_charts:
         legend_title="Department",
     )
 
-    st.plotly_chart(
-        fig,
-        width="stretch",
-    )
+    st.plotly_chart(fig, width="stretch")
 
 
 # ============================================================
@@ -542,9 +504,7 @@ st.info(
     "confirm future departures."
 )
 
-risk = load_view(
-    "vw_attrition_risk_department"
-)
+risk = load_view("vw_attrition_risk_department")
 
 if not risk.empty:
 
@@ -626,14 +586,10 @@ if not risk.empty:
                 x="department_id",
                 y="high_risk_share_pct",
                 text="high_risk_share_pct",
-                title=(
-                    "Predicted High-Risk Share by Department"
-                ),
+                title="Predicted High-Risk Share by Department",
                 labels={
                     "department_id": "Department",
-                    "high_risk_share_pct": (
-                        "High-Risk Share (%)"
-                    ),
+                    "high_risk_share_pct": "High-Risk Share (%)",
                 },
             )
 
@@ -648,10 +604,7 @@ if not risk.empty:
                 yaxis_ticksuffix="%",
             )
 
-            st.plotly_chart(
-                fig,
-                width="stretch",
-            )
+            st.plotly_chart(fig, width="stretch")
 
             st.subheader("Department-Level Risk Summary")
 
@@ -670,9 +623,7 @@ if not risk.empty:
                         "as_of_date": "Snapshot Date",
                         "employee_count": "Employees",
                         "high_risk_count": "High-Risk Employees",
-                        "high_risk_share_pct": (
-                            "High-Risk Share (%)"
-                        ),
+                        "high_risk_share_pct": "High-Risk Share (%)",
                     }
                 ),
                 width="stretch",

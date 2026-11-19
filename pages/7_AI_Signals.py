@@ -1,9 +1,31 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
-from src.dashboard_utils import load_view, metric, privacy_note
+from src.dashboard_utils import (
+    ensure_database_ready,
+    load_view,
+    metric,
+    privacy_note
+)
+
+# --------------------------------------------------
+# Database Readiness
+# --------------------------------------------------
+
+try:
+    with st.spinner("Checking PulseIQ database..."):
+        ensure_database_ready()
+except Exception as exc:
+    st.error("Unable to prepare the PulseIQ database.")
+    st.exception(exc)
+    st.stop()
+
+# --------------------------------------------------
+# Page Title
+# --------------------------------------------------
 
 st.title("AI Signals & Forecasts")
 st.caption(
@@ -149,10 +171,6 @@ if not a.empty:
     )
 else:
     st.info("No anomaly summary data is available.")
-
-# --------------------------------------------------
-# 3. Department Attrition Risk
-# --------------------------------------------------
 
 # --------------------------------------------------
 # 3. Department Attrition Risk

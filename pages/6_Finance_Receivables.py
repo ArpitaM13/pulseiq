@@ -2,18 +2,50 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from src.dashboard_utils import metric, load_view, apply_period_filter, money
+
+from src.dashboard_utils import (
+    ensure_database_ready,
+    metric,
+    load_view,
+    apply_period_filter,
+    money,
+)
+
+# --------------------------------------------------
+# DATABASE READINESS
+# --------------------------------------------------
+
+try:
+    with st.spinner("Checking PulseIQ database..."):
+        ensure_database_ready()
+except Exception as exc:
+    st.error("Unable to prepare the PulseIQ database.")
+    st.exception(exc)
+    st.stop()
+
+
+# --------------------------------------------------
+# FINANCE, RECEIVABLES AND CASH FLOW
+# --------------------------------------------------
 
 st.title("Finance, Receivables & Cash Flow")
-st.caption("Phase 3 | Tasks 11-12 - P&L trends, invoice aging, expenses and cash collections")
+st.caption(
+    "Phase 3 | Tasks 11-12 - P&L trends, invoice aging, "
+    "expenses and cash collections"
+)
+
 
 # --------------------------------------------------
-# 1. Monthly Profit and Loss
+# 1. MONTHLY PROFIT AND LOSS
 # --------------------------------------------------
+
 f = load_view("vw_finance_monthly")
 
 if not f.empty:
-    f = apply_period_filter(f, key_prefix="finance_monthly")
+    f = apply_period_filter(
+        f,
+        key_prefix="finance_monthly",
+    )
 
     st.subheader("Monthly Profit & Loss")
 
@@ -24,12 +56,15 @@ if not f.empty:
             "Select month",
             months,
             format_func=lambda x: pd.to_datetime(x).strftime("%B %Y"),
-            key="monthly_pnl_selector"
+            key="monthly_pnl_selector",
         )
 
-        selected = f.loc[f["period"] == selected_month].iloc[0]
+        selected = f.loc[
+            f["period"] == selected_month
+        ].iloc[0]
 
         c1, c2, c3 = st.columns(3)
+
         c1.metric("Revenue", f"₹{selected['revenue']:,.2f}")
         c2.metric("Expenses", f"₹{selected['expenses']:,.2f}")
         c3.metric("Net Profit", f"₹{selected['net_profit']:,.2f}")
@@ -43,9 +78,10 @@ if not f.empty:
         labels={
             "period": "Month",
             "value": "INR",
-            "variable": "Metric"
-        }
+            "variable": "Metric",
+        },
     )
+
     st.plotly_chart(fig, width="stretch")
 
     fig = px.line(
@@ -57,25 +93,30 @@ if not f.empty:
         labels={
             "period": "Month",
             "value": "Percent",
-            "variable": "Metric"
-        }
+            "variable": "Metric",
+        },
     )
+
     st.plotly_chart(fig, width="stretch")
 
+
 # --------------------------------------------------
-# 2. Days Sales Outstanding
+# 2. DAYS SALES OUTSTANDING
 # --------------------------------------------------
+
 dso = metric("M20")
 
 if not dso.empty and dso.metric_value.notna().any():
     st.metric(
         "Days Sales Outstanding (90-day basis)",
-        f"{dso.metric_value.dropna().iloc[0]:.1f} days"
+        f"{dso.metric_value.dropna().iloc[0]:.1f} days",
     )
 
+
 # --------------------------------------------------
-# 3. Invoice Aging
+# 3. INVOICE AGING
 # --------------------------------------------------
+
 age = load_view("vw_invoice_aging")
 
 if not age.empty:
@@ -88,14 +129,17 @@ if not age.empty:
         title="Open Receivable Balance",
         labels={
             "ageing_bucket": "Aging Bucket",
-            "balance_due": "INR"
-        }
+            "balance_due": "INR",
+        },
     )
+
     st.plotly_chart(fig, width="stretch")
 
+
 # --------------------------------------------------
-# 4. Overdue Receivables by Client
+# 4. OVERDUE RECEIVABLES BY CLIENT
 # --------------------------------------------------
+
 ov = metric("M21")
 
 if not ov.empty:
@@ -116,14 +160,17 @@ if not ov.empty:
             title="Largest Overdue Balances (Top 15)",
             labels={
                 "metric_value": "INR",
-                "dimension_label": "Client ID"
-            }
+                "dimension_label": "Client ID",
+            },
         )
+
         st.plotly_chart(fig, width="stretch")
 
+
 # --------------------------------------------------
-# 5. Monthly Cash Collections
+# 5. MONTHLY CASH COLLECTIONS
 # --------------------------------------------------
+
 cash = load_view("vw_cash_collections_monthly")
 
 if not cash.empty:
@@ -138,12 +185,12 @@ if not cash.empty:
 
     c1.metric(
         "Total Cash Collected",
-        f"₹{total_collected:,.2f}"
+        f"₹{total_collected:,.2f}",
     )
 
     c2.metric(
         "Invoices with Payments",
-        f"{total_invoices:,.0f}"
+        f"{total_invoices:,.0f}",
     )
 
     fig = px.line(
@@ -154,9 +201,10 @@ if not cash.empty:
         title="Monthly Cash Collections Trend",
         labels={
             "period": "Month",
-            "cash_collected": "Cash Collected (INR)"
-        }
+            "cash_collected": "Cash Collected (INR)",
+        },
     )
+
     st.plotly_chart(fig, width="stretch")
 
     fig = px.bar(
@@ -166,9 +214,10 @@ if not cash.empty:
         title="Number of Invoices with Payments by Month",
         labels={
             "period": "Month",
-            "invoices_paid": "Invoices Paid"
-        }
+            "invoices_paid": "Invoices Paid",
+        },
     )
+
     st.plotly_chart(fig, width="stretch")
 
     st.caption(
@@ -177,15 +226,20 @@ if not cash.empty:
         "proxy, not a transaction-level or bank-reconciled cash flow."
     )
 
+
 # --------------------------------------------------
-# 6. Expense Trends by Department
+# 6. EXPENSE TRENDS BY DEPARTMENT
 # --------------------------------------------------
+
 e = load_view("vw_expense_monthly_department")
 
 if not e.empty:
     st.subheader("Expense Trends by Department")
 
-    e = apply_period_filter(e, key_prefix="expense_monthly")
+    e = apply_period_filter(
+        e,
+        key_prefix="expense_monthly",
+    )
 
     fig = px.line(
         e,
@@ -197,14 +251,17 @@ if not e.empty:
         labels={
             "period": "Month",
             "total_expense": "INR",
-            "department_id": "Department"
-        }
+            "department_id": "Department",
+        },
     )
+
     st.plotly_chart(fig, width="stretch")
 
+
 # --------------------------------------------------
-# 7. Expense by Category
+# 7. EXPENSE BY CATEGORY
 # --------------------------------------------------
+
 cat = load_view("vw_expense_by_category")
 
 if not cat.empty:
@@ -220,16 +277,21 @@ if not cat.empty:
         title="Expense Category Spend (Excluding GST)",
         labels={
             "spend": "INR",
-            "category": "Category"
-        }
+            "category": "Category",
+        },
     )
 
-    fig.update_layout(yaxis={"categoryorder": "total ascending"})
+    fig.update_layout(
+        yaxis={"categoryorder": "total ascending"}
+    )
+
     st.plotly_chart(fig, width="stretch")
 
+
 # --------------------------------------------------
-# 8. Top 10 Vendors
+# 8. TOP 10 VENDORS
 # --------------------------------------------------
+
 vendors = load_view("vw_top_vendors")
 
 if not vendors.empty:
@@ -237,7 +299,7 @@ if not vendors.empty:
 
     vendors = vendors.sort_values(
         "spend",
-        ascending=False
+        ascending=False,
     ).head(10)
 
     fig = px.bar(
@@ -248,16 +310,21 @@ if not vendors.empty:
         title="Top 10 Vendors by Spend (Excluding GST)",
         labels={
             "spend": "INR",
-            "vendor_name": "Vendor"
-        }
+            "vendor_name": "Vendor",
+        },
     )
 
-    fig.update_layout(yaxis={"categoryorder": "total ascending"})
+    fig.update_layout(
+        yaxis={"categoryorder": "total ascending"}
+    )
+
     st.plotly_chart(fig, width="stretch")
 
+
 # --------------------------------------------------
-# 9. Data Interpretation and Findings
+# 9. DATA INTERPRETATION AND FINDINGS
 # --------------------------------------------------
+
 st.caption(
     "The monthly DSO uses the workbook's current invoice balance "
     "snapshot and 90-day invoice totals. It should not be read as "
@@ -274,7 +341,9 @@ st.markdown("""
 3. **Skyline Realty Holdings** is the highest-spend vendor, with spending of ₹1.69 crore.
 """)
 
-st.subheader("Possible Reasons for Revenue Increasing but Profit Margin Decreasing")
+st.subheader(
+    "Possible Reasons for Revenue Increasing but Profit Margin Decreasing"
+)
 
 st.markdown("""
 1. Expenses may be increasing faster than revenue.
