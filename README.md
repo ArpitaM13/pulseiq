@@ -1,8 +1,7 @@
-# PulseIQ Analytics
+﻿# PulseIQ Analytics
 
 A local analytics workspace for the fictional company **Zenith Nova Technologies**, built from the supplied PulseIQ Analytics workbook. The project brings workforce, payroll, attendance, finance, delivery, AI-signal and data-quality information into one DuckDB-backed model.
-
-> **Dataset note:** The workbook is fictional training data. It deliberately contains known data-quality issues. The project keeps raw data unchanged, reports those issues, and uses validation-controlled analytical views where appropriate. A failed quality check is not hidden or automatically “fixed”.
+> **Dataset note:** The workbook is fictional training data. It deliberately contains known data-quality issues. The project keeps raw data unchanged, reports those issues, and uses validation-controlled analytical views where appropriate. A failed quality check is not hidden or automatically "fixed".
 
 ## What is included
 
@@ -11,7 +10,7 @@ A local analytics workspace for the fictional company **Zenith Nova Technologies
 - **Warehouse:** the source star-schema tables are available in the `warehouse` schema; ETL clean/rejected outputs are available in `staging`.
 - **Data contracts:** the supplied `data_contracts` sheet is evaluated for its four governed feeds. Unexpected columns are warned about and preserved rather than silently dropped.
 - **Data quality gatekeeper:** all 14 checks from the workbook catalogue run into `audit.dq_results` and are exported to `reports/`.
-- **Metric layer:** 28 named SQL metric views (M01–M28), a catalog and lineage view. Privacy-sensitive values are suppressed below their published group size. Five representative metrics are independently spot-checked with pandas against their governed SQL views.
+- **Metric layer:** 28 named SQL metric views (M01â€“M28), a catalog and lineage view. Privacy-sensitive values are suppressed below their published group size. Five representative metrics are independently spot-checked with pandas against their governed SQL views.
 - **Dashboards:** Streamlit pages for workforce, attendance/leave, attrition risk, productivity, payroll/budget, finance/receivables, AI signals, data quality, KPI exploration, lineage/API, cross-department comparison and executive health scorecard.
 - **Read-only API:** FastAPI endpoints for metric catalog/data, quality results and lineage.
 - **Handover evidence:** CSV/JSON summaries, an HTML board pack, independent metric spot-check output, architecture notes, a walkthrough, report templates and a GitHub Actions workflow.
@@ -20,7 +19,7 @@ A local analytics workspace for the fictional company **Zenith Nova Technologies
 
 Open PowerShell in the folder containing this README. If you have already created a `.venv`, activate it first; otherwise run:
 
-```powershell
+````powershell
 if (-not (Test-Path .venv)) { py -3.10 -m venv .venv }
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
@@ -32,7 +31,7 @@ The setup only creates `.venv` and `.env` when they do not already exist, so it 
 
 ## Run the full pipeline
 
-```powershell
+````powershell
 python run_pipeline.py
 ```
 
@@ -40,7 +39,7 @@ This one command loads the workbook, runs ETL, builds the warehouse, checks data
 
 For step-by-step stages, you can also run:
 
-```powershell
+````powershell
 python load_to_duckdb.py
 python -m src.etl
 python -m src.warehouse
@@ -56,7 +55,7 @@ The stages can be rerun. Worksheet tables and clean CSV files are replaced rathe
 
 After the pipeline succeeds, open a second terminal in the project folder, activate `.venv`, and run:
 
-```powershell
+````powershell
 streamlit run app.py
 ```
 
@@ -66,7 +65,7 @@ Streamlit prints a local URL (normally `http://localhost:8501`). Open that URL i
 
 Open another terminal in the project folder, activate `.venv`, and run:
 
-```powershell
+````powershell
 uvicorn api:app --reload
 ```
 
@@ -83,7 +82,7 @@ The API is read-only. It does not accept data writes.
 
 ## Verify the work
 
-```powershell
+````powershell
 python -m compileall -q .
 python -m pytest -q
 ```
@@ -158,3 +157,40 @@ The GitHub Actions workflow is scheduled for the first day of each month at 06:0
 The report was tested in a separate Python 3.10.11 virtual environment. Pinned dependencies passed pip check, and the full pipeline and September 2026 report generation completed successfully.
 
 The training dataset contains known quality issues. Contract failures, DQ failures, and warnings are reported rather than hidden. Review these results before using the figures for business decisions.
+
+## Task 19 - Metric Lineage and FastAPI
+
+### API overview
+PulseIQ provides a read-only FastAPI service using the same DuckDB analytics database as the Streamlit dashboard.
+
+### Start the API
+```powershell
+python -m uvicorn api:app --host 127.0.0.1 --port 8000
+```
+Open http://127.0.0.1:8000/docs for interactive Swagger documentation.
+
+### Available endpoints
+- GET /health - API and database health
+- GET /metrics - Metric catalogue
+- GET /metrics/{metric_id} - Metric definition, source, refresh details and records
+- GET /dq - Data-quality results
+- GET /lineage - Metric definitions and source lineage
+- GET /docs - Interactive API documentation
+
+### Metrics tested
+M01 Headcount, M04 Monthly Attrition, M09 Employer Payroll Cost, M17 Net Profit and M23 On-Time Delivery Rate returned HTTP 200 during local testing.
+
+### Data lineage
+Source Excel workbook -> Workbook ingestion -> ETL and staging -> DuckDB warehouse -> Analytics metric views -> FastAPI and Streamlit dashboard.
+
+### Freshness and limitations
+The latest successful pipeline refresh verified during Task 19 was 16 November 2026 at 14:25:09 IST. The source was 03_PulseIQ_Analytics_Star_Schema_Dataset.xlsx. The project uses a static training workbook and has no automatic incoming data feed. The scheduled GitHub Actions workflow generates a monthly Excel report artifact; it does not automatically refresh the database used by the public Streamlit dashboard.
+
+### Data-quality transparency
+The latest recorded results contained 14 checks: 3 PASS, 7 WARN and 4 FAIL. Known training-data issues are reported rather than hidden. Privacy-sensitive groups below the applicable minimum size are suppressed in governed metric views.
+
+### Verification
+The API health endpoint, five representative metric endpoints, data-quality endpoint and lineage endpoint returned HTTP 200. Swagger documentation opened successfully, and Python compilation completed without errors.
+
+### Deployment status
+The FastAPI service was tested locally. Public API hosting and production access controls remain separate deployment work. The public Streamlit dashboard is hosted independently.
