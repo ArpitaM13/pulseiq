@@ -20,3 +20,5 @@ logs/*.log
 
 # Local requirements backup
 requirements.before-task16.txt
+
+.streamlit/secrets.toml
